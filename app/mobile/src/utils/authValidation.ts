@@ -12,6 +12,26 @@ export type SignupFormErrors = {
   confirmPassword?: string;
 };
 
+export type LoginFormData = {
+  email: string;
+  password: string;
+};
+
+export type LoginFormErrors = {
+  email?: string;
+  password?: string;
+};
+
+export type ResetPasswordFormData = {
+  password: string;
+  confirmPassword: string;
+};
+
+export type ResetPasswordFormErrors = {
+  password?: string;
+  confirmPassword?: string;
+};
+
 const EMAIL_PATTERN =
   /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
 
@@ -24,6 +44,40 @@ const COMMON_EMAIL_TYPOS: Record<string, string> = {
   'outlook.co': 'outlook.com',
   'hotmail.co': 'hotmail.com',
 };
+
+function getPasswordError(
+  password: string
+): string | undefined {
+  if (!password) {
+    return 'Password is required.';
+  }
+
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters.';
+  }
+
+  if (/\s/.test(password)) {
+    return 'Password cannot contain spaces.';
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain an uppercase letter.';
+  }
+
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain a lowercase letter.';
+  }
+
+  if (!/[0-9]/.test(password)) {
+    return 'Password must contain a number.';
+  }
+
+  if (!/[!@#$%^&*]/.test(password)) {
+    return 'Password must contain a special character: ! @ # $ % ^ & *';
+  }
+
+  return undefined;
+}
 
 export function getEmailSuggestion(
   email: string
@@ -39,7 +93,8 @@ export function getEmailSuggestion(
   const usernamePart = trimmedEmail.slice(0, atIndex);
   const domainPart = trimmedEmail.slice(atIndex + 1);
 
-  const correctedDomain = COMMON_EMAIL_TYPOS[domainPart];
+  const correctedDomain =
+    COMMON_EMAIL_TYPOS[domainPart];
 
   if (!correctedDomain) {
     return null;
@@ -78,26 +133,10 @@ export function validateSignupForm(
   }
 
   // Password
-  if (!password) {
-    errors.password = 'Password is required.';
-  } else if (password.length < 8) {
-    errors.password =
-      'Password must be at least 8 characters.';
-  } else if (/\s/.test(password)) {
-    errors.password =
-      'Password cannot contain spaces.';
-  } else if (!/[A-Z]/.test(password)) {
-    errors.password =
-      'Password must contain an uppercase letter.';
-  } else if (!/[a-z]/.test(password)) {
-    errors.password =
-      'Password must contain a lowercase letter.';
-  } else if (!/[0-9]/.test(password)) {
-    errors.password =
-      'Password must contain a number.';
-  } else if (!/[!@#$%^&*]/.test(password)) {
-    errors.password =
-      'Password must contain a special character: ! @ # $ % ^ & *';
+  const passwordError = getPasswordError(password);
+
+  if (passwordError) {
+    errors.password = passwordError;
   }
 
   // Confirm password
@@ -118,16 +157,6 @@ export function hasSignupErrors(
   return Object.keys(errors).length > 0;
 }
 
-export type LoginFormData = {
-  email: string;
-  password: string;
-};
-
-export type LoginFormErrors = {
-  email?: string;
-  password?: string;
-};
-
 export function validateLoginForm(
   data: LoginFormData
 ): LoginFormErrors {
@@ -138,16 +167,13 @@ export function validateLoginForm(
 
   if (!email) {
     errors.email = 'Email is required.';
-  } else {
-    const emailPattern =
-      /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
-
-    if (!emailPattern.test(email)) {
-      errors.email =
-        'Please enter a valid email address.';
-    }
+  } else if (!EMAIL_PATTERN.test(email)) {
+    errors.email =
+      'Please enter a valid email address.';
   }
 
+  // Login does not check password strength.
+  // It only checks that a password was entered.
   if (!password) {
     errors.password = 'Password is required.';
   }
@@ -157,6 +183,38 @@ export function validateLoginForm(
 
 export function hasLoginErrors(
   errors: LoginFormErrors
+): boolean {
+  return Object.keys(errors).length > 0;
+}
+
+export function validateResetPasswordForm(
+  data: ResetPasswordFormData
+): ResetPasswordFormErrors {
+  const errors: ResetPasswordFormErrors = {};
+
+  const password = data.password;
+  const confirmPassword = data.confirmPassword;
+
+  // Reuse the same password rules as Signup.
+  const passwordError = getPasswordError(password);
+
+  if (passwordError) {
+    errors.password = passwordError;
+  }
+
+  if (!confirmPassword) {
+    errors.confirmPassword =
+      'Please confirm your password.';
+  } else if (password !== confirmPassword) {
+    errors.confirmPassword =
+      'Passwords do not match.';
+  }
+
+  return errors;
+}
+
+export function hasResetPasswordErrors(
+  errors: ResetPasswordFormErrors
 ): boolean {
   return Object.keys(errors).length > 0;
 }
