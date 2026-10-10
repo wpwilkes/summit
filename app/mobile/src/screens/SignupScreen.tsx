@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -10,17 +11,21 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import PasswordInput from '../components/PasswordInput';
 import { RootStackParamList } from '../types/navigation.types';
+
 import {
   SignupFormErrors,
   getEmailSuggestion,
   hasSignupErrors,
   validateSignupForm,
 } from '../utils/authValidation';
+
+import { registerUser } from '../services/authService';
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -38,6 +43,12 @@ export default function SignupScreen({
 
   const [errors, setErrors] =
     useState<SignupFormErrors>({});
+
+  const [submitError, setSubmitError] =
+    useState('');
+
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -65,8 +76,10 @@ export default function SignupScreen({
     }, 250);
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     Keyboard.dismiss();
+
+    setSubmitError('');
 
     const validationErrors = validateSignupForm({
       username,
@@ -81,19 +94,42 @@ export default function SignupScreen({
       return;
     }
 
-    /*
-     * Frontend validation passed.
-     *
-     * FUTURE BACKEND STEP:
-     * Send username, email, and password
-     * to Wesley's registration API.
-     *
-     * After successful registration:
-     *
-     * navigation.navigate('EmailVerification', {
-     *   email: email.trim(),
-     * });
-     */
+    const trimmedUsername = username.trim();
+    const trimmedEmail = email.trim();
+
+    setIsSubmitting(true);
+
+    try {
+      /*
+       * MOCK AUTHENTICATION CALL
+       *
+       * For now, registerUser() returns a fake backend
+       * response from authService.ts.
+       *
+       * Later, the service will send the same data
+       * to Wesley's real registration API.
+       */
+      const response = await registerUser({
+        username: trimmedUsername,
+        email: trimmedEmail,
+        password,
+      });
+
+      if (!response.success) {
+        setSubmitError(response.message);
+        return;
+      }
+
+      navigation.navigate('EmailVerification', {
+        email: trimmedEmail,
+      });
+    } catch {
+      setSubmitError(
+        'Unable to create account. Please try again.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleUsernameChange = (value: string) => {
@@ -105,6 +141,10 @@ export default function SignupScreen({
         username: undefined,
       }));
     }
+
+    if (submitError) {
+      setSubmitError('');
+    }
   };
 
   const handleEmailChange = (value: string) => {
@@ -115,6 +155,10 @@ export default function SignupScreen({
         ...currentErrors,
         email: undefined,
       }));
+    }
+
+    if (submitError) {
+      setSubmitError('');
     }
   };
 
@@ -131,6 +175,10 @@ export default function SignupScreen({
         confirmPassword: undefined,
       }));
     }
+
+    if (submitError) {
+      setSubmitError('');
+    }
   };
 
   const handleConfirmPasswordChange = (
@@ -143,6 +191,10 @@ export default function SignupScreen({
         ...currentErrors,
         confirmPassword: undefined,
       }));
+    }
+
+    if (submitError) {
+      setSubmitError('');
     }
   };
 
@@ -157,6 +209,8 @@ export default function SignupScreen({
       ...currentErrors,
       email: undefined,
     }));
+
+    setSubmitError('');
   };
 
   return (
@@ -374,50 +428,27 @@ export default function SignupScreen({
           {/* Sign Up */}
 
           <Pressable
-            style={styles.button}
+            style={[
+              styles.button,
+              isSubmitting
+                ? styles.buttonDisabled
+                : null,
+            ]}
             onPress={handleSignup}
+            disabled={isSubmitting}
           >
             <Text style={styles.buttonText}>
-              Sign Up
+              {isSubmitting
+                ? 'Creating Account...'
+                : 'Sign Up'}
             </Text>
           </Pressable>
 
-          {/* =====================================================
-              TEMPORARY DEVELOPMENT TEST ONLY
-
-              PURPOSE:
-              Opens EmailVerificationScreen before Wesley's
-              registration API is available.
-
-              REMOVE THIS ENTIRE __DEV__ BLOCK after the real
-              signup API is connected and successful registration
-              automatically navigates to EmailVerification.
-
-              Search this file later for:
-              "TEMPORARY DEVELOPMENT TEST"
-             ===================================================== */}
-          {__DEV__ && (
-            <Pressable
-              style={styles.devTestButton}
-              onPress={() =>
-                navigation.navigate(
-                  'EmailVerification',
-                  {
-                    email:
-                      email.trim() ||
-                      'test@example.com',
-                  }
-                )
-              }
-            >
-              <Text
-                style={styles.devTestButtonText}
-              >
-                DEV: Test Email Verification
-              </Text>
-            </Pressable>
-          )}
-          {/* END TEMPORARY DEVELOPMENT TEST */}
+          {submitError ? (
+            <Text style={styles.submitErrorText}>
+              {submitError}
+            </Text>
+          ) : null}
 
           <Text style={styles.loginText}>
             Already have an account?{' '}
@@ -553,35 +584,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+
   buttonText: {
     color: '#111111',
     fontSize: 16,
     fontWeight: '700',
   },
 
-  // =========================================================
-  // TEMPORARY DEVELOPMENT TEST STYLES
-  //
-  // REMOVE these two styles when the real signup API
-  // replaces the temporary Email Verification test button.
-  //
-  // Search this file later for:
-  // "TEMPORARY DEVELOPMENT TEST"
-  // =========================================================
-
-  devTestButton: {
-    borderWidth: 1,
-    borderColor: '#555555',
-    borderRadius: 4,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 14,
-  },
-
-  devTestButtonText: {
-    color: '#888888',
+  submitErrorText: {
+    color: '#ff9f9f',
     fontSize: 13,
-    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 12,
   },
 
   loginText: {

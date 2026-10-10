@@ -31,7 +31,10 @@ export async function registerUser(
 ): Promise<AuthResponse> {
   await wait(500);
 
-  console.log('Mock signup request:', data);
+  console.log('Mock signup request:', {
+    username: data.username,
+    email: data.email,
+  });
 
   return {
     success: true,
@@ -45,7 +48,9 @@ export async function loginUser(
 ): Promise<LoginResponse> {
   await wait(500);
 
-  console.log('Mock login request:', data);
+  console.log('Mock login request:', {
+    email: data.email,
+  });
 
   return {
     success: true,
@@ -59,7 +64,10 @@ export async function verifyEmail(
 ): Promise<AuthResponse> {
   await wait(500);
 
-  console.log('Mock email verification request:', data);
+  console.log('Mock email verification request:', {
+    email: data.email,
+    code: data.code,
+  });
 
   if (data.code !== MOCK_VERIFICATION_CODE) {
     return {
@@ -81,7 +89,9 @@ export async function resendVerificationCode(
 
   console.log(
     'Mock resend verification request:',
-    data
+    {
+      email: data.email,
+    }
   );
 
   return {
@@ -97,7 +107,9 @@ export async function requestPasswordReset(
 
   console.log(
     'Mock password recovery request:',
-    data
+    {
+      email: data.email,
+    }
   );
 
   return {
@@ -112,7 +124,10 @@ export async function resetPassword(
 ): Promise<AuthResponse> {
   await wait(500);
 
-  console.log('Mock reset password request:', data);
+  console.log('Mock reset password request:', {
+    email: data.email,
+    code: data.code,
+  });
 
   if (data.code !== MOCK_VERIFICATION_CODE) {
     return {
