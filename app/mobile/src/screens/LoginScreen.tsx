@@ -21,6 +21,9 @@ import {
   validateLoginForm,
 } from '../utils/authValidation';
 
+import { loginUser } from '../services/authService';
+import { saveAuthToken } from '../utils/tokenStorage';
+
 type Props = NativeStackScreenProps<
   RootStackParamList,
   'Login'
@@ -35,10 +38,22 @@ export default function LoginScreen({
   const [errors, setErrors] =
     useState<LoginFormErrors>({});
 
+  const [errorMessage, setErrorMessage] =
+    useState('');
+
+  const [successMessage, setSuccessMessage] =
+    useState('');
+
+  const [isLoggingIn, setIsLoggingIn] =
+    useState(false);
+
   const passwordRef = useRef<TextInput>(null);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     Keyboard.dismiss();
+
+    setErrorMessage('');
+    setSuccessMessage('');
 
     const validationErrors = validateLoginForm({
       email,
@@ -51,18 +66,68 @@ export default function LoginScreen({
       return;
     }
 
-    /*
-     * FUTURE BACKEND STEP:
-     *
-     * Send email and password to Wesley's login API.
-     *
-     * If login succeeds:
-     * - receive/store authentication token
-     * - navigate to the main Summit app
-     *
-     * If login fails:
-     * - show the server error
-     */
+    const trimmedEmail = email.trim();
+
+    setIsLoggingIn(true);
+
+    try {
+      /*
+       * MOCK AUTHENTICATION CALL
+       *
+       * For now, loginUser() returns a mock
+       * authentication response.
+       *
+       * Later, authService.ts will send the same
+       * email and password to Wesley's backend.
+       */
+      const response = await loginUser({
+        email: trimmedEmail,
+        password,
+      });
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      /*
+       * Wesley confirmed that successful login
+       * will return an authentication token.
+       */
+      if (!response.token) {
+        setErrorMessage(
+          'Login succeeded, but no authentication token was returned.'
+        );
+        return;
+      }
+
+      /*
+       * Store the authentication token securely.
+       *
+       * Right now this stores the mock token.
+       * Later it will store the real backend token.
+       */
+      await saveAuthToken(response.token);
+
+      setSuccessMessage(response.message);
+
+      /*
+       * Later:
+       *
+       * Navigate to the authenticated Summit
+       * Home/Feed screen after login succeeds.
+       *
+       * For now, stay on this screen because
+       * the authenticated main screen is not
+       * connected yet.
+       */
+    } catch {
+      setErrorMessage(
+        'Unable to log in. Please try again.'
+      );
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleEmailChange = (value: string) => {
@@ -74,6 +139,14 @@ export default function LoginScreen({
         email: undefined,
       }));
     }
+
+    if (errorMessage) {
+      setErrorMessage('');
+    }
+
+    if (successMessage) {
+      setSuccessMessage('');
+    }
   };
 
   const handlePasswordChange = (value: string) => {
@@ -84,6 +157,14 @@ export default function LoginScreen({
         ...currentErrors,
         password: undefined,
       }));
+    }
+
+    if (errorMessage) {
+      setErrorMessage('');
+    }
+
+    if (successMessage) {
+      setSuccessMessage('');
     }
   };
 
@@ -200,14 +281,40 @@ export default function LoginScreen({
             </Text>
           </Pressable>
 
+          {/* Mock Login Result */}
+
+          {errorMessage !== '' && (
+            <View style={styles.resultErrorContainer}>
+              <Text style={styles.resultErrorText}>
+                {errorMessage}
+              </Text>
+            </View>
+          )}
+
+          {successMessage !== '' && (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>
+                {successMessage}
+              </Text>
+            </View>
+          )}
+
           {/* Login */}
 
           <Pressable
-            style={styles.button}
+            style={[
+              styles.button,
+              isLoggingIn
+                ? styles.buttonDisabled
+                : null,
+            ]}
             onPress={handleLogin}
+            disabled={isLoggingIn}
           >
             <Text style={styles.buttonText}>
-              Log In
+              {isLoggingIn
+                ? 'Logging In...'
+                : 'Log In'}
             </Text>
           </Pressable>
 
@@ -329,12 +436,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  resultErrorContainer: {
+    backgroundColor: '#2a1717',
+    borderWidth: 1,
+    borderColor: '#8a3d3d',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+
+  resultErrorText: {
+    color: '#ffb4b4',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+
+  successContainer: {
+    backgroundColor: '#17271d',
+    borderWidth: 1,
+    borderColor: '#3d7950',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+
+  successText: {
+    color: '#a8e6b8',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+
   button: {
     backgroundColor: '#e7c86e',
     paddingVertical: 15,
     borderRadius: 4,
     alignItems: 'center',
     marginTop: 4,
+  },
+
+  buttonDisabled: {
+    opacity: 0.6,
   },
 
   buttonText: {
