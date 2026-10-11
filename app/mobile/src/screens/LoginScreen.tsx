@@ -41,9 +41,6 @@ export default function LoginScreen({
   const [errorMessage, setErrorMessage] =
     useState('');
 
-  const [successMessage, setSuccessMessage] =
-    useState('');
-
   const [isLoggingIn, setIsLoggingIn] =
     useState(false);
 
@@ -53,7 +50,6 @@ export default function LoginScreen({
     Keyboard.dismiss();
 
     setErrorMessage('');
-    setSuccessMessage('');
 
     const validationErrors = validateLoginForm({
       email,
@@ -91,8 +87,8 @@ export default function LoginScreen({
       }
 
       /*
-       * Wesley confirmed that successful login
-       * will return an authentication token.
+       * A successful login must return an
+       * authentication token.
        */
       if (!response.token) {
         setErrorMessage(
@@ -109,18 +105,21 @@ export default function LoginScreen({
        */
       await saveAuthToken(response.token);
 
-      setSuccessMessage(response.message);
-
       /*
-       * Later:
+       * Move into the authenticated part of
+       * the app.
        *
-       * Navigate to the authenticated Summit
-       * Home/Feed screen after login succeeds.
-       *
-       * For now, stay on this screen because
-       * the authenticated main screen is not
-       * connected yet.
+       * Reset the navigation stack so the user
+       * cannot press Back and return to Login.
        */
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'Home',
+          },
+        ],
+      });
     } catch {
       setErrorMessage(
         'Unable to log in. Please try again.'
@@ -143,10 +142,6 @@ export default function LoginScreen({
     if (errorMessage) {
       setErrorMessage('');
     }
-
-    if (successMessage) {
-      setSuccessMessage('');
-    }
   };
 
   const handlePasswordChange = (value: string) => {
@@ -161,10 +156,6 @@ export default function LoginScreen({
 
     if (errorMessage) {
       setErrorMessage('');
-    }
-
-    if (successMessage) {
-      setSuccessMessage('');
     }
   };
 
@@ -281,20 +272,12 @@ export default function LoginScreen({
             </Text>
           </Pressable>
 
-          {/* Mock Login Result */}
+          {/* Login Error */}
 
           {errorMessage !== '' && (
             <View style={styles.resultErrorContainer}>
               <Text style={styles.resultErrorText}>
                 {errorMessage}
-              </Text>
-            </View>
-          )}
-
-          {successMessage !== '' && (
-            <View style={styles.successContainer}>
-              <Text style={styles.successText}>
-                {successMessage}
               </Text>
             </View>
           )}
@@ -448,22 +431,6 @@ const styles = StyleSheet.create({
 
   resultErrorText: {
     color: '#ffb4b4',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-
-  successContainer: {
-    backgroundColor: '#17271d',
-    borderWidth: 1,
-    borderColor: '#3d7950',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-  },
-
-  successText: {
-    color: '#a8e6b8',
     fontSize: 13,
     textAlign: 'center',
   },
