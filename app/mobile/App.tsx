@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import WelcomeScreen from './src/screens/WelcomeScreen';
+import PublicFeedScreen from './src/screens/PublicFeedScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import EmailVerificationScreen from './src/screens/EmailVerificationScreen';
@@ -99,6 +100,14 @@ export default function App() {
           <Stack.Screen
             name="Welcome"
             component={WelcomeScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="PublicFeed"
+            component={PublicFeedScreen}
             options={{
               headerShown: false,
             }}

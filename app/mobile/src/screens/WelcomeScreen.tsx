@@ -46,7 +46,7 @@ export default function WelcomeScreen({
           </Text>
         </View>
 
-        {/* Authentication Options */}
+        {/* Entry Options */}
 
         <View style={styles.buttonContainer}>
           <Pressable
@@ -70,6 +70,22 @@ export default function WelcomeScreen({
           >
             <Text style={styles.secondaryButtonText}>
               Log In
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.browseButton}
+            onPress={() =>
+              navigation.navigate('PublicFeed')
+            }
+            accessibilityRole="button"
+          >
+            <Text style={styles.browseButtonText}>
+              Browse Summit
+            </Text>
+
+            <Text style={styles.browseDescription}>
+              Continue without an account
             </Text>
           </Pressable>
         </View>
@@ -163,12 +179,30 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 4,
     alignItems: 'center',
+    marginBottom: 12,
   },
 
   secondaryButtonText: {
     color: '#e7c86e',
     fontSize: 16,
     fontWeight: '700',
+  },
+
+  browseButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+
+  browseButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  browseDescription: {
+    color: '#777777',
+    fontSize: 12,
+    marginTop: 4,
   },
 
   footerText: {
