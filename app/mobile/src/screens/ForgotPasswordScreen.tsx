@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../types/navigation.types';
+import { requestPasswordReset } from '../services/authService';
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -24,7 +25,12 @@ export default function ForgotPasswordScreen({
   navigation,
 }: Props) {
   const [email, setEmail] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+
+  const [errorMessage, setErrorMessage] =
+    useState('');
+
+  const [isSending, setIsSending] =
+    useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -44,8 +50,10 @@ export default function ForgotPasswordScreen({
     }, 250);
   };
 
-  const handleRecovery = () => {
+  const handleRecovery = async () => {
     Keyboard.dismiss();
+
+    setErrorMessage('');
 
     const trimmedEmail = email.trim();
 
@@ -64,24 +72,53 @@ export default function ForgotPasswordScreen({
       return;
     }
 
-    setErrorMessage('');
+    setIsSending(true);
 
-    /*
-     * FUTURE BACKEND STEP:
-     *
-     * Send the email to Wesley's password
-     * recovery API.
-     *
-     * After the backend accepts the request,
-     * show a privacy-safe message such as:
-     *
-     * "If an account exists for this email,
-     * password recovery instructions have
-     * been sent."
-     *
-     * Do NOT show:
-     * "This email is not registered."
-     */
+    try {
+      /*
+       * MOCK AUTHENTICATION CALL
+       *
+       * For now, requestPasswordReset() uses
+       * the temporary mock authentication service.
+       *
+       * Later, authService.ts will send this same
+       * request to Wesley's real backend:
+       *
+       * {
+       *   email
+       * }
+       *
+       * The backend response should remain
+       * privacy-safe and should not reveal
+       * whether the email is registered.
+       */
+      const response =
+        await requestPasswordReset({
+          email: trimmedEmail,
+        });
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      /*
+       * After the recovery request succeeds,
+       * immediately move to Reset Password.
+       *
+       * The Reset Password screen will show
+       * the permanent recovery-code instruction.
+       */
+      navigation.navigate('ResetPassword', {
+        email: trimmedEmail,
+      });
+    } catch {
+      setErrorMessage(
+        'Unable to send the recovery code. Please try again.'
+      );
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -125,8 +162,8 @@ export default function ForgotPasswordScreen({
 
           <Text style={styles.subtitle}>
             Enter the email associated with your
-            account and we will send password
-            recovery instructions.
+            account and we will send a password
+            recovery code.
           </Text>
 
           <Text style={styles.label}>
@@ -154,17 +191,27 @@ export default function ForgotPasswordScreen({
           />
 
           {errorMessage !== '' && (
-            <Text style={styles.errorText}>
-              {errorMessage}
-            </Text>
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                {errorMessage}
+              </Text>
+            </View>
           )}
 
           <Pressable
-            style={styles.button}
+            style={[
+              styles.button,
+              isSending
+                ? styles.buttonDisabled
+                : null,
+            ]}
             onPress={handleRecovery}
+            disabled={isSending}
           >
             <Text style={styles.buttonText}>
-              Send Recovery Instructions
+              {isSending
+                ? 'Sending...'
+                : 'Send Recovery Code'}
             </Text>
           </Pressable>
 
@@ -174,6 +221,7 @@ export default function ForgotPasswordScreen({
               navigation.navigate('Login')
             }
             accessibilityRole="button"
+            disabled={isSending}
           >
             <Text style={styles.backToLoginText}>
               Back to Login
@@ -269,10 +317,21 @@ const styles = StyleSheet.create({
     borderColor: '#d96565',
   },
 
+  errorContainer: {
+    backgroundColor: '#2a1717',
+    borderWidth: 1,
+    borderColor: '#8a3d3d',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+
   errorText: {
-    color: '#ff9f9f',
+    color: '#ffb4b4',
     fontSize: 13,
-    marginBottom: 14,
+    textAlign: 'center',
   },
 
   button: {
@@ -281,6 +340,10 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignItems: 'center',
     marginTop: 12,
+  },
+
+  buttonDisabled: {
+    opacity: 0.6,
   },
 
   buttonText: {

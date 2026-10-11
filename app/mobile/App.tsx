@@ -1,3 +1,9 @@
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -8,17 +14,77 @@ import SignupScreen from './src/screens/SignupScreen';
 import EmailVerificationScreen from './src/screens/EmailVerificationScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
+import HomeScreen from './src/screens/HomeScreen';
 
 import { RootStackParamList } from './src/types/navigation.types';
+import { getAuthToken } from './src/utils/tokenStorage';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+type InitialRoute = 'Login' | 'Home';
+
 export default function App() {
+  const [initialRoute, setInitialRoute] =
+    useState<InitialRoute>('Login');
+
+  const [isCheckingAuth, setIsCheckingAuth] =
+    useState(true);
+
+  useEffect(() => {
+    const checkStoredLogin = async () => {
+      try {
+        /*
+         * Check SecureStore when the app starts.
+         *
+         * If a token exists, the user has already
+         * logged in and can enter the authenticated
+         * part of the app.
+         */
+        const token = await getAuthToken();
+
+        if (token) {
+          setInitialRoute('Home');
+        } else {
+          setInitialRoute('Login');
+        }
+      } catch {
+        /*
+         * If SecureStore cannot be read for some
+         * reason, safely send the user to Login.
+         */
+        setInitialRoute('Login');
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkStoredLogin();
+  }, []);
+
+  /*
+   * Do not briefly show Login while SecureStore
+   * is still being checked.
+   */
+  if (isCheckingAuth) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color="#e7c86e"
+          />
+        </View>
+
+        <StatusBar style="light" />
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName="Login"
+          initialRouteName={initialRoute}
           screenOptions={{
             contentStyle: {
               backgroundColor: '#0f0f10',
@@ -92,6 +158,14 @@ export default function App() {
               headerBackButtonDisplayMode: 'minimal',
             }}
           />
+
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
 
@@ -99,3 +173,12 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#0f0f10',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

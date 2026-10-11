@@ -1,6 +1,5 @@
 export type RootStackParamList = {
   Login: undefined;
-
   Signup: undefined;
 
   EmailVerification: {
@@ -12,4 +11,6 @@ export type RootStackParamList = {
   ResetPassword: {
     email: string;
   };
+
+  Home: undefined;
 };

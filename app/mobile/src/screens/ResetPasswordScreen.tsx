@@ -20,6 +20,10 @@ import {
   validateResetPasswordForm,
 } from '../utils/authValidation';
 import { RootStackParamList } from '../types/navigation.types';
+import {
+  requestPasswordReset,
+  resetPassword,
+} from '../services/authService';
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -27,6 +31,7 @@ type Props = NativeStackScreenProps<
 >;
 
 export default function ResetPasswordScreen({
+  navigation,
   route,
 }: Props) {
   const { email } = route.params;
@@ -37,8 +42,24 @@ export default function ResetPasswordScreen({
     useState('');
 
   const [codeError, setCodeError] = useState('');
+
   const [errors, setErrors] =
     useState<ResetPasswordFormErrors>({});
+
+  const [errorMessage, setErrorMessage] =
+    useState('');
+
+  const [successMessage, setSuccessMessage] =
+    useState('');
+
+  const [isResetting, setIsResetting] =
+    useState(false);
+
+  const [isResending, setIsResending] =
+    useState(false);
+
+  const [isResetComplete, setIsResetComplete] =
+    useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -59,6 +80,16 @@ export default function ResetPasswordScreen({
     }, 250);
   };
 
+  const clearResultMessages = () => {
+    if (errorMessage) {
+      setErrorMessage('');
+    }
+
+    if (successMessage) {
+      setSuccessMessage('');
+    }
+  };
+
   const handleCodeChange = (value: string) => {
     const digitsOnly = value.replace(/[^0-9]/g, '');
 
@@ -67,6 +98,8 @@ export default function ResetPasswordScreen({
     if (codeError) {
       setCodeError('');
     }
+
+    clearResultMessages();
   };
 
   const handlePasswordChange = (value: string) => {
@@ -82,6 +115,8 @@ export default function ResetPasswordScreen({
         confirmPassword: undefined,
       }));
     }
+
+    clearResultMessages();
   };
 
   const handleConfirmPasswordChange = (
@@ -95,10 +130,15 @@ export default function ResetPasswordScreen({
         confirmPassword: undefined,
       }));
     }
+
+    clearResultMessages();
   };
 
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     Keyboard.dismiss();
+
+    setErrorMessage('');
+    setSuccessMessage('');
 
     let currentCodeError = '';
 
@@ -126,23 +166,111 @@ export default function ResetPasswordScreen({
       return;
     }
 
-    /*
-     * FUTURE MOCK / BACKEND STEP:
-     *
-     * Send:
-     *
-     * {
-     *   email,
-     *   code,
-     *   newPassword: password
-     * }
-     *
-     * For now, this screen only validates
-     * the frontend fields.
-     *
-     * Later this will call the shared
-     * authentication service.
-     */
+    setIsResetting(true);
+
+    try {
+      /*
+       * MOCK AUTHENTICATION CALL
+       *
+       * For now, resetPassword() uses the
+       * temporary mock authentication service.
+       *
+       * Later, authService.ts will send the
+       * same request to Wesley's backend:
+       *
+       * {
+       *   email,
+       *   code,
+       *   newPassword
+       * }
+       */
+      const response = await resetPassword({
+        email,
+        code,
+        newPassword: password,
+      });
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      /*
+       * Password reset succeeded.
+       *
+       * Stay on this screen so the user has
+       * enough time to read the confirmation.
+       * The user can then choose Back to Login.
+       */
+      setSuccessMessage(response.message);
+      setIsResetComplete(true);
+
+      /*
+       * Clear sensitive values after success.
+       */
+      setCode('');
+      setPassword('');
+      setConfirmPassword('');
+      setCodeError('');
+      setErrors({});
+    } catch {
+      setErrorMessage(
+        'Unable to reset the password. Please try again.'
+      );
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    Keyboard.dismiss();
+
+    setErrorMessage('');
+    setSuccessMessage('');
+    setIsResending(true);
+
+    try {
+      /*
+       * Request another recovery code.
+       *
+       * We use the same password-recovery
+       * request again with the account email.
+       */
+      const response =
+        await requestPasswordReset({
+          email,
+        });
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      /*
+       * Clear the previous code because a
+       * new recovery code was requested.
+       */
+      setCode('');
+      setCodeError('');
+
+      setSuccessMessage(
+        'A new recovery code was requested. Check your email.'
+      );
+
+      setTimeout(() => {
+        codeRef.current?.focus();
+      }, 100);
+    } catch {
+      setErrorMessage(
+        'Unable to resend the recovery code. Please try again.'
+      );
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    navigation.popToTop();
   };
 
   return (
@@ -186,8 +314,10 @@ export default function ResetPasswordScreen({
           </Text>
 
           <Text style={styles.subtitle}>
-            Enter the verification code sent to
-            your email and create a new password.
+            If an account exists for {email}, a
+            6-digit recovery code has been sent.
+            Enter the code below and create a new
+            password.
           </Text>
 
           <View style={styles.emailContainer}>
@@ -228,6 +358,7 @@ export default function ResetPasswordScreen({
               maxLength={6}
               autoCorrect={false}
               returnKeyType="next"
+              editable={!isResetComplete}
               onFocus={() =>
                 scrollToField(
                   codePosition.current
@@ -265,6 +396,7 @@ export default function ResetPasswordScreen({
               hasError={Boolean(errors.password)}
               autoComplete="new-password"
               returnKeyType="next"
+              editable={!isResetComplete}
               onFocus={() =>
                 scrollToField(
                   passwordPosition.current
@@ -312,6 +444,7 @@ export default function ResetPasswordScreen({
               )}
               autoComplete="new-password"
               returnKeyType="done"
+              editable={!isResetComplete}
               onFocus={() =>
                 scrollToField(
                   confirmPasswordPosition.current
@@ -329,14 +462,72 @@ export default function ResetPasswordScreen({
             ) : null}
           </View>
 
-          <Pressable
-            style={styles.button}
-            onPress={handleResetPassword}
-          >
-            <Text style={styles.buttonText}>
-              Reset Password
-            </Text>
-          </Pressable>
+          {/* Mock / Backend Result */}
+
+          {errorMessage !== '' && (
+            <View style={styles.resultErrorContainer}>
+              <Text style={styles.resultErrorText}>
+                {errorMessage}
+              </Text>
+            </View>
+          )}
+
+          {successMessage !== '' && (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>
+                {successMessage}
+              </Text>
+            </View>
+          )}
+
+          {!isResetComplete ? (
+            <>
+              <Pressable
+                style={[
+                  styles.button,
+                  isResetting
+                    ? styles.buttonDisabled
+                    : null,
+                ]}
+                onPress={handleResetPassword}
+                disabled={
+                  isResetting ||
+                  isResending
+                }
+              >
+                <Text style={styles.buttonText}>
+                  {isResetting
+                    ? 'Resetting...'
+                    : 'Reset Password'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.resendButton}
+                onPress={handleResendCode}
+                disabled={
+                  isResending ||
+                  isResetting
+                }
+                accessibilityRole="button"
+              >
+                <Text style={styles.resendText}>
+                  {isResending
+                    ? 'Sending...'
+                    : "Didn't receive the code? Resend Recovery Code"}
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              style={styles.button}
+              onPress={handleBackToLogin}
+            >
+              <Text style={styles.buttonText}>
+                Back to Login
+              </Text>
+            </Pressable>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -458,6 +649,38 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
 
+  resultErrorContainer: {
+    backgroundColor: '#2a1717',
+    borderWidth: 1,
+    borderColor: '#8a3d3d',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+
+  resultErrorText: {
+    color: '#ffb4b4',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+
+  successContainer: {
+    backgroundColor: '#17271d',
+    borderWidth: 1,
+    borderColor: '#3d7950',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+
+  successText: {
+    color: '#a8e6b8',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+
   button: {
     backgroundColor: '#e7c86e',
     paddingVertical: 15,
@@ -466,9 +689,26 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+
   buttonText: {
     color: '#111111',
     fontSize: 16,
     fontWeight: '700',
+  },
+
+  resendButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+
+  resendText: {
+    color: '#e7c86e',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
