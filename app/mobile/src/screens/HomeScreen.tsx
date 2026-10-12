@@ -25,7 +25,7 @@ export default function HomeScreen({
       index: 0,
       routes: [
         {
-          name: 'Login',
+          name: 'Welcome',
         },
       ],
     });

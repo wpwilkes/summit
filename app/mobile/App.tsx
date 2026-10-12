@@ -9,6 +9,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import WelcomeScreen from './src/screens/WelcomeScreen';
+import PublicFeedScreen from './src/screens/PublicFeedScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import EmailVerificationScreen from './src/screens/EmailVerificationScreen';
@@ -19,13 +21,16 @@ import HomeScreen from './src/screens/HomeScreen';
 import { RootStackParamList } from './src/types/navigation.types';
 import { getAuthToken } from './src/utils/tokenStorage';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack =
+  createNativeStackNavigator<RootStackParamList>();
 
-type InitialRoute = 'Login' | 'Home';
+type InitialRoute =
+  | 'Welcome'
+  | 'Home';
 
 export default function App() {
   const [initialRoute, setInitialRoute] =
-    useState<InitialRoute>('Login');
+    useState<InitialRoute>('Welcome');
 
   const [isCheckingAuth, setIsCheckingAuth] =
     useState(true);
@@ -34,25 +39,26 @@ export default function App() {
     const checkStoredLogin = async () => {
       try {
         /*
-         * Check SecureStore when the app starts.
+         * Check SecureStore when Summit starts.
          *
-         * If a token exists, the user has already
-         * logged in and can enter the authenticated
-         * part of the app.
+         * If a token exists, open the authenticated
+         * Home screen.
+         *
+         * If no token exists, open Welcome.
          */
         const token = await getAuthToken();
 
         if (token) {
           setInitialRoute('Home');
         } else {
-          setInitialRoute('Login');
+          setInitialRoute('Welcome');
         }
       } catch {
         /*
-         * If SecureStore cannot be read for some
-         * reason, safely send the user to Login.
+         * If SecureStore cannot be read,
+         * safely show the Welcome screen.
          */
-        setInitialRoute('Login');
+        setInitialRoute('Welcome');
       } finally {
         setIsCheckingAuth(false);
       }
@@ -62,8 +68,8 @@ export default function App() {
   }, []);
 
   /*
-   * Do not briefly show Login while SecureStore
-   * is still being checked.
+   * Do not briefly show Welcome or Login while
+   * SecureStore is still being checked.
    */
   if (isCheckingAuth) {
     return (
@@ -91,6 +97,22 @@ export default function App() {
             },
           }}
         >
+          <Stack.Screen
+            name="Welcome"
+            component={WelcomeScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="PublicFeed"
+            component={PublicFeedScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+
           <Stack.Screen
             name="Login"
             component={LoginScreen}
