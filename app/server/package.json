@@ -47,7 +47,7 @@
     "test:integration:local": "tsx --env-file=../../.env --test tests/integration/**/*.test.ts",
     "test:integration:docker": "docker compose exec server npm run test:integration",
     "format": "prettier --write . --ignore-path ../../.prettierignore",
-    "format:check": "prettier --check --ignore-path ../../.prettierignore",
+    "format:check": "prettier --check . --ignore-path ../../.prettierignore",
     "lint": "eslint src tests",
     "lint:fix": "eslint src tests --fix"
   }

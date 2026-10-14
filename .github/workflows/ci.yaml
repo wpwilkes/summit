@@ -19,10 +19,6 @@ jobs:
       POSTGRES_PORT: 5432
       POSTGRES_DB: summit_test
 
-    defaults:
-      run:
-        working-directory: app/server
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -32,27 +28,44 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: app/server/package-lock.json
+          cache-dependency-path: |
+            app/shared/package-lock.json
+            app/server/package-lock.json
 
-      - name: Install dependencies
+      - name: Install shared dependencies
+        working-directory: app/shared
+        run: npm ci
+
+      - name: Build shared
+        working-directory: app/shared
+        run: npm run build
+
+      - name: Install server dependencies
+        working-directory: app/server
         run: npm ci
 
       - name: Check formatting
+        working-directory: app/server
         run: npm run format:check
 
       - name: Generate prisma
+        working-directory: app/server
         run: npm run prisma:generate:git
 
       - name: Lint
+        working-directory: app/server
         run: npm run lint
 
       - name: Typecheck
+        working-directory: app/server
         run: npm run typecheck
 
       - name: Run tests
+        working-directory: app/server
         run: npm run test:unit
 
       - name: Build server
+        working-directory: app/server
         run: npm run build
 
   test-docker:
