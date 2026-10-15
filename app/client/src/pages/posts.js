@@ -19,6 +19,34 @@ function notice(message) {
     : '';
 }
 
+// Khan's mobile app owns the login session. Ask it to clear the session
+// and return to its existing Login screen; no token enters the web page.
+const logoutButton = el('logout');
+
+function logoutFailed() {
+  logoutButton.disabled = false;
+  logoutButton.textContent = 'Log out';
+  notice('Unable to log out. Please try again.');
+}
+
+if (typeof window.ReactNativeWebView?.postMessage === 'function') {
+  logoutButton.hidden = false;
+  window.addEventListener('summit:logout-error', logoutFailed);
+
+  logoutButton.addEventListener('click', () => {
+    if (logoutButton.disabled) return;
+
+    logoutButton.disabled = true;
+    logoutButton.textContent = 'Logging out…';
+
+    try {
+      window.ReactNativeWebView.postMessage('summit:logout');
+    } catch {
+      logoutFailed();
+    }
+  });
+}
+
 async function withButton(button, action) {
   if (button.disabled) return;
 

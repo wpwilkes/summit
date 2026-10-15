@@ -15,12 +15,18 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../types/navigation.types';
 
+import {
+  resendVerificationCode,
+  verifyEmail,
+} from '../services/authService';
+
 type Props = NativeStackScreenProps<
   RootStackParamList,
   'EmailVerification'
 >;
 
 export default function EmailVerificationScreen({
+  navigation,
   route,
 }: Props) {
   const { email } = route.params;
@@ -33,6 +39,12 @@ export default function EmailVerificationScreen({
 
   const [successMessage, setSuccessMessage] =
     useState('');
+
+  const [isVerifying, setIsVerifying] =
+    useState(false);
+
+  const [isResending, setIsResending] =
+    useState(false);
 
   const codeInputRef = useRef<TextInput>(null);
 
@@ -51,7 +63,7 @@ export default function EmailVerificationScreen({
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     Keyboard.dismiss();
 
     if (!verificationCode) {
@@ -71,44 +83,86 @@ export default function EmailVerificationScreen({
     }
 
     setErrorMessage('');
+    setSuccessMessage('');
+    setIsVerifying(true);
 
-    /*
-     * Later:
-     *
-     * Send verificationCode to Wesley's
-     * verification API.
-     *
-     * If successful:
-     *
-     * setSuccessMessage(
-     *   'Email verified successfully.'
-     * );
-     *
-     * Then navigate to Login.
-     *
-     * If unsuccessful:
-     *
-     * setErrorMessage(
-     *   'Incorrect or expired verification code.'
-     * );
-     */
+    try {
+      /*
+       * MOCK AUTHENTICATION CALL
+       *
+       * For now, verifyEmail() uses the
+       * temporary mock authentication service.
+       *
+       * Later, authService.ts will send the same
+       * request to Wesley's real backend.
+       */
+      const response = await verifyEmail({
+        email,
+        code: verificationCode,
+      });
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      setSuccessMessage(
+        `${response.message} Redirecting to Login...`
+      );
+
+      /*
+       * Login is the first screen in our auth stack,
+       * so return to it after successful verification.
+       */
+      setTimeout(() => {
+        navigation.popToTop();
+      }, 1200);
+    } catch {
+      setErrorMessage(
+        'Unable to verify email. Please try again.'
+      );
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
+    Keyboard.dismiss();
+
     setErrorMessage('');
     setSuccessMessage('');
+    setIsResending(true);
 
-    /*
-     * Later:
-     *
-     * Call Wesley's resend verification API.
-     *
-     * On success, show something like:
-     *
-     * setSuccessMessage(
-     *   'A new verification code has been sent.'
-     * );
-     */
+    try {
+      /*
+       * MOCK AUTHENTICATION CALL
+       *
+       * Later this same service function will call
+       * Wesley's real resend-verification API.
+       */
+      const response =
+        await resendVerificationCode({
+          email,
+        });
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      setVerificationCode('');
+      setSuccessMessage(response.message);
+
+      setTimeout(() => {
+        codeInputRef.current?.focus();
+      }, 100);
+    } catch {
+      setErrorMessage(
+        'Unable to resend the verification code. Please try again.'
+      );
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -206,11 +260,21 @@ export default function EmailVerificationScreen({
           )}
 
           <Pressable
-            style={styles.button}
+            style={[
+              styles.button,
+              isVerifying
+                ? styles.buttonDisabled
+                : null,
+            ]}
             onPress={handleVerify}
+            disabled={
+              isVerifying || isResending
+            }
           >
             <Text style={styles.buttonText}>
-              Verify
+              {isVerifying
+                ? 'Verifying...'
+                : 'Verify'}
             </Text>
           </Pressable>
 
@@ -221,10 +285,22 @@ export default function EmailVerificationScreen({
 
             <Pressable
               onPress={handleResendCode}
+              disabled={
+                isResending || isVerifying
+              }
               accessibilityRole="button"
             >
-              <Text style={styles.resendLink}>
-                Resend Code
+              <Text
+                style={[
+                  styles.resendLink,
+                  isResending
+                    ? styles.resendDisabled
+                    : null,
+                ]}
+              >
+                {isResending
+                  ? 'Sending...'
+                  : 'Resend Code'}
               </Text>
             </Pressable>
           </View>
@@ -378,6 +454,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+
   buttonText: {
     color: '#111111',
     fontSize: 16,
@@ -400,5 +480,9 @@ const styles = StyleSheet.create({
     color: '#e7c86e',
     fontSize: 14,
     fontWeight: '600',
+  },
+
+  resendDisabled: {
+    opacity: 0.6,
   },
 });

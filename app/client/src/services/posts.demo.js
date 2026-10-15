@@ -39,6 +39,14 @@ export function createDemoPostsApi() {
   const posts = new Map();
   const comments = new Map();
   const votes = new Map();
+  let nextId = 0;
+
+  // Inline mobile WebViews do not always expose crypto.randomUUID.
+  // These IDs identify local demo records, not authentication tokens.
+  function createId() {
+    return globalThis.crypto?.randomUUID?.() ??
+      `demo-${Date.now()}-${++nextId}`;
+  }
 
   function find(id) {
     const post = posts.get(id);
@@ -79,7 +87,7 @@ export function createDemoPostsApi() {
       const fields = validate(input ?? {});
       const timestamp = new Date().toISOString();
       const post = {
-        id: crypto.randomUUID(),
+        id: createId(),
         ...fields,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -125,7 +133,7 @@ export function createDemoPostsApi() {
         throw new Error('Comment must be 2000 characters or fewer.');
       }
       const comment = {
-        id: crypto.randomUUID(),
+        id: createId(),
         postId: id,
         body: text,
         author: 'Ayman',
