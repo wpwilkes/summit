@@ -6,7 +6,7 @@ import {
   View,
 } from 'react-native';
 
-import { Post } from '../types/post.types';
+import { Post, Reply } from '../types/post.types';
 
 type Props = {
   post: Post;
@@ -54,6 +54,21 @@ export default function PostCard({
   const toneColor = getToneColor(
     post.summaryTone
   );
+
+  const handleSummaryPress = () => {
+    // all replies of this post, to be sent to the server later
+    const replies: Reply[] = post.replies ?? [];
+
+    console.log('AI summary requested:', {
+      postId: post.id,
+      replyCount: replies.length,
+      replies,
+    });
+
+    setShowSummary(
+      (currentValue) => !currentValue
+    );
+  };
 
   return (
     <View style={styles.card}>
@@ -146,12 +161,7 @@ export default function PostCard({
         {post.aiSummary ? (
           <Pressable
             style={styles.summaryButton}
-            onPress={() =>
-              setShowSummary(
-                (currentValue) =>
-                  !currentValue
-              )
-            }
+            onPress={handleSummaryPress}
             accessibilityRole="button"
             accessibilityLabel={
               showSummary
