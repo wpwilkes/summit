@@ -1,3 +1,11 @@
+export type Reply = {
+  id: string;
+  author: string;
+  timeAgo: string;
+  body: string;
+  voteCount: number;
+};
+
 export type Post = {
   id: string;
   community: string;
@@ -20,4 +28,6 @@ export type Post = {
     | 'Light-hearted';
 
   aiSummary?: string;
+
+  replies?: Reply[];
 };
