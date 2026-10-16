@@ -6,9 +6,9 @@
     "strict": true,
     "declaration": true,
     "declarationMap": true,
-    "emitDeclarationOnly": true,
-    "outDir": "dist",
-    "rootDir": "src"
+    "emitDeclarationOnly": false,
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
   "include": ["src/**/*.ts"]
 }

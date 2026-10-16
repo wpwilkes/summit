@@ -28,8 +28,8 @@ services:
 
   server:
     build:
-      context: ./app/server
-      dockerfile: Dockerfile
+      context: ./app
+      dockerfile: server/Dockerfile
 
     env_file:
       - .env
