@@ -1,13 +1,15 @@
 import { pingDatabaseService, pingServerService } from './ping.services.js';
 import {
   PING_CONTRACTS,
+  PingDatabaseRequest,
+  PingServerRequest,
   type PingDatabaseResponse,
   type PingServerResponse,
 } from '@summit/shared';
 import type { Request, Response } from 'express';
 
 export async function pingDatabaseController(
-  _request: Request,
+  _request: Request<PingDatabaseRequest>,
   response: Response<PingDatabaseResponse>,
 ): Promise<void> {
   try {
@@ -26,7 +28,7 @@ export async function pingDatabaseController(
 }
 
 export function pingServerController(
-  _request: Request,
+  _request: Request<PingServerRequest>,
   response: Response<PingServerResponse>,
 ): void {
   try {

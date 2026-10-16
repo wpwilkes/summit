@@ -1,41 +1,37 @@
 import { z } from "zod";
 
 export const UserSchema = z.object({
-  id: z.uuid(),
+  id: z.int(),
   email: z.email(),
-  username: z.string(),
+  username: z.string().min(3).max(30),
   createdAt: z.iso.datetime(),
 });
-
 export type User = z.infer<typeof UserSchema>;
 
-export const RegisterRequestSchema = z.object({
-  email: z.email(),
-  username: z.uuid(),
-  password: z.string(),
-});
-
-export type RegisterRequest = z.infer<typeof RegisterRequestSchema>;
-
-export const RegisterResponseSchema = z.object({
+export const AuthResponseSchema = z.object({
   user: UserSchema,
-  accessToken: z.string(),
-  refreshToken: z.string(),
+  token: z.string(),
 });
-
-export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
+export type LoginResponse = z.infer<typeof AuthResponseSchema>;
+export type RegisterResponse = z.infer<typeof AuthResponseSchema>;
 
 export const LoginRequestSchema = z.object({
   email: z.email(),
   password: z.string(),
 });
-
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
-export const LoginResponseSchema = z.object({
-  user: UserSchema,
-  accessToken: z.string(),
-  refreshToken: z.string(),
-});
+export const MeRequestSchema = z.undefined();
+export type MeRequest = z.infer<typeof MeRequestSchema>;
 
-export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+export const MeResponseSchema = z.object({
+  user: UserSchema,
+});
+export type MeResponse = z.infer<typeof MeResponseSchema>;
+
+export const RegisterRequestSchema = z.object({
+  email: z.email(),
+  username: z.string().min(3).max(30),
+  password: z.string().min(8).max(64),
+});
+export type RegisterRequest = z.infer<typeof RegisterRequestSchema>;
