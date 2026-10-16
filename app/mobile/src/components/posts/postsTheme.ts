@@ -1,0 +1,55 @@
+import { StyleSheet } from 'react-native';
+
+export const colors = {
+  background: '#0f0f10',
+  surface: '#18181b',
+  border: '#333337',
+  text: '#ffffff',
+  muted: '#b0b0b8',
+  accent: '#e7c86e',
+  accentSurface: '#29251a',
+  onAccent: '#111111',
+  error: '#ffb4ab',
+};
+
+export const ui = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 16,
+    gap: 12,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  title: { color: colors.text, fontSize: 20, fontWeight: '700', flexShrink: 1 },
+  label: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  body: { color: colors.text, fontSize: 15, lineHeight: 23 },
+  muted: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  error: { color: colors.error, fontSize: 14, lineHeight: 21 },
+  input: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    color: colors.text,
+    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    minHeight: 48,
+  },
+  button: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.accent,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: { color: colors.onAccent, fontSize: 14, fontWeight: '700' },
+  secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  secondaryText: { color: colors.accent, fontSize: 14, fontWeight: '600' },
+  disabled: { opacity: 0.5 },
+});
