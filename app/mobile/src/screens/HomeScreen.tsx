@@ -1,130 +1,59 @@
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../types/navigation.types';
+import { getAuthToken, removeAuthToken } from '../utils/tokenStorage';
+import { colors } from '../components/posts/postsTheme';
+import SummitPostsScreen from './SummitPostsScreen';
 
-import { RootStackParamList } from '../types/navigation.types';
-import { removeAuthToken } from '../utils/tokenStorage';
+type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-type Props = NativeStackScreenProps<
-  RootStackParamList,
-  'Home'
->;
+/** Keep Khan's existing Home route and replace only its temporary content. */
+export default function HomeScreen({ navigation }: Props) {
+  const [ready, setReady] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
+  const logoutPending = useRef(false);
+  const mounted = useRef(false);
 
-export default function HomeScreen({
-  navigation,
-}: Props) {
-  const handleLogout = async () => {
-    await removeAuthToken();
-
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Welcome',
-        },
-      ],
+  useEffect(() => {
+    let active = true;
+    mounted.current = true;
+    // Confirm the local session before mounting Posts. This is not server validation.
+    getAuthToken().then((token) => {
+      if (!active) return;
+      if (token) setReady(true);
+      else navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+    }).catch(() => {
+      if (active) navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
     });
+    return () => { active = false; mounted.current = false; };
+  }, [navigation]);
+
+  const handleLogout = async () => {
+    if (logoutPending.current) return;
+    logoutPending.current = true;
+    setLoggingOut(true);
+    setLogoutError('');
+    try {
+      // Await SecureStore deletion before reporting a successful logout.
+      await removeAuthToken();
+      if (!mounted.current) return;
+      setReady(false);
+      // Reset removes the signed-in screen and its in-memory posts/drafts.
+      navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+    } catch {
+      if (mounted.current) setLogoutError('Unable to log out. Please try again.');
+    } finally {
+      logoutPending.current = false;
+      if (mounted.current) setLoggingOut(false);
+    }
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.logoBox}>
-          <Text style={styles.logoText}>S</Text>
-        </View>
-
-        <Text style={styles.title}>
-          Summit
-        </Text>
-
-        <Text style={styles.subtitle}>
-          You are signed in.
-        </Text>
-
-        <Text style={styles.description}>
-          This is a temporary authenticated screen
-          for testing login, session storage, and
-          logout.
-        </Text>
-
-        <Pressable
-          style={styles.button}
-          onPress={handleLogout}
-        >
-          <Text style={styles.buttonText}>
-            Log Out
-          </Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
-  );
+  if (!ready) return <View style={styles.loading}><ActivityIndicator color={colors.accent} size="large" /></View>;
+  return <SummitPostsScreen onLogout={handleLogout} loggingOut={loggingOut} logoutError={logoutError} />;
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0f0f10',
-  },
-
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-
-  logoBox: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#e7c86e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-
-  logoText: {
-    color: '#111111',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-
-  title: {
-    color: '#ffffff',
-    fontSize: 30,
-    fontWeight: 'bold',
-  },
-
-  subtitle: {
-    color: '#e7c86e',
-    fontSize: 18,
-    marginTop: 10,
-  },
-
-  description: {
-    color: '#999999',
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 32,
-  },
-
-  button: {
-    width: '100%',
-    backgroundColor: '#e7c86e',
-    paddingVertical: 15,
-    borderRadius: 4,
-    alignItems: 'center',
-  },
-
-  buttonText: {
-    color: '#111111',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  loading: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
 });
