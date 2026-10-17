@@ -10,55 +10,192 @@ import {
 } from '../types/auth.types';
 
 /*
- * TEMPORARY MOCK AUTHENTICATION SERVICE
+ * AUTHENTICATION SERVICE
  *
- * These functions pretend to be the backend.
+ * Register and Login now use the real backend.
  *
- * Later, when the real backend is ready,
- * we will replace the mock logic inside
- * these functions with real HTTP requests.
+ * Email verification, resend verification,
+ * forgot password, and reset password are still
+ * temporary mocks until backend endpoints are ready.
  */
 
 const MOCK_VERIFICATION_CODE = '123456';
+
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL;
 
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => {
     setTimeout(resolve, milliseconds);
   });
 
+type BackendAuthResponse = {
+  user: {
+    id: number;
+    email: string;
+    username: string;
+    createdAt: string;
+  };
+  token: string;
+};
+
+type BackendErrorResponse = {
+  error?: string;
+  message?: string;
+};
+
+function getApiBaseUrl(): string {
+  if (!API_BASE_URL) {
+    throw new Error(
+      'EXPO_PUBLIC_API_URL is not configured.'
+    );
+  }
+
+  return API_BASE_URL.replace(/\/$/, '');
+}
+
+/*
+ * REAL REGISTRATION
+ */
 export async function registerUser(
   data: SignupRequest
 ): Promise<AuthResponse> {
-  await wait(500);
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}/api/auth/register`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          username: data.username,
+          password: data.password,
+        }),
+      }
+    );
 
-  console.log('Mock signup request:', {
-    username: data.username,
-    email: data.email,
-  });
+    const responseData = (await response.json()) as
+      | BackendAuthResponse
+      | BackendErrorResponse;
 
-  return {
-    success: true,
-    message:
-      'Account created. Please verify your email.',
-  };
+    if (!response.ok) {
+      const errorData =
+        responseData as BackendErrorResponse;
+
+      return {
+        success: false,
+        message:
+          errorData.error ??
+          errorData.message ??
+          'Registration failed. Please try again.',
+      };
+    }
+
+    const registerData =
+      responseData as BackendAuthResponse;
+
+    if (!registerData.user) {
+      return {
+        success: false,
+        message:
+          'Registration failed. User information was not returned.',
+      };
+    }
+
+    return {
+      success: true,
+      message:
+        'Account created successfully.',
+    };
+  } catch (error) {
+    console.error(
+      'Real registration request failed:',
+      error
+    );
+
+    return {
+      success: false,
+      message:
+        'Could not connect to the Summit server.',
+    };
+  }
 }
 
+/*
+ * REAL LOGIN
+ */
 export async function loginUser(
   data: LoginRequest
 ): Promise<LoginResponse> {
-  await wait(500);
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}/api/auth/login`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
+      }
+    );
 
-  console.log('Mock login request:', {
-    email: data.email,
-  });
+    const responseData = (await response.json()) as
+      | BackendAuthResponse
+      | BackendErrorResponse;
 
-  return {
-    success: true,
-    message: 'Login successful.',
-    token: 'mock-auth-token',
-  };
+    if (!response.ok) {
+      if (response.status === 401) {
+        return {
+          success: false,
+          message: 'Invalid email or password.',
+        };
+      }
+
+      return {
+        success: false,
+        message:
+          'Login failed. Please try again.',
+      };
+    }
+
+    const loginData =
+      responseData as BackendAuthResponse;
+
+    if (!loginData.token) {
+      return {
+        success: false,
+        message:
+          'Login failed. No authentication token was returned.',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Login successful.',
+      token: loginData.token,
+    };
+  } catch (error) {
+    console.error(
+      'Real login request failed:',
+      error
+    );
+
+    return {
+      success: false,
+      message:
+        'Could not connect to the Summit server.',
+    };
+  }
 }
 
+/*
+ * MOCK EMAIL VERIFICATION
+ */
 export async function verifyEmail(
   data: VerifyEmailRequest
 ): Promise<AuthResponse> {
@@ -82,6 +219,9 @@ export async function verifyEmail(
   };
 }
 
+/*
+ * MOCK RESEND VERIFICATION
+ */
 export async function resendVerificationCode(
   data: ResendVerificationRequest
 ): Promise<AuthResponse> {
@@ -96,10 +236,14 @@ export async function resendVerificationCode(
 
   return {
     success: true,
-    message: 'A new verification code was sent.',
+    message:
+      'A new verification code was sent.',
   };
 }
 
+/*
+ * MOCK FORGOT PASSWORD
+ */
 export async function requestPasswordReset(
   data: ForgotPasswordRequest
 ): Promise<AuthResponse> {
@@ -119,6 +263,9 @@ export async function requestPasswordReset(
   };
 }
 
+/*
+ * MOCK RESET PASSWORD
+ */
 export async function resetPassword(
   data: ResetPasswordRequest
 ): Promise<AuthResponse> {
