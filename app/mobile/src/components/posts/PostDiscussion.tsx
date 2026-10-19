@@ -4,6 +4,7 @@ import {
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { summarizePost } from '../../services/summaryService';
 import type { SummitPostsService } from '../../services/summitPostsService';
 import type { SummitPost } from '../../types/summitPost.types';
 import PostEditor from './PostEditor';
@@ -22,7 +23,32 @@ export default function PostDiscussion({ post, service, startEditing, onChange, 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [body, setBody] = useState('');
   const [error, setError] = useState('');
+  const [summary, setSummary] = useState('');
+  const [summaryNote, setSummaryNote] = useState('');
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryError, setSummaryError] = useState('');
   const comments = service.comments(post.id);
+  const summarize = async () => {
+    setSummarizing(true);
+    setSummaryError('');
+    try {
+      // just the comment text, no usernames
+      const commentTexts = comments.map((comment) => comment.body);
+      const text = await summarizePost({
+        title: post.title,
+        description: post.description,
+        comments: commentTexts,
+      });
+      setSummary(text);
+      setSummaryNote(commentTexts.length
+        ? `Based on the post and ${commentTexts.length} ${commentTexts.length === 1 ? 'comment' : 'comments'}.`
+        : 'Based on the post only.');
+    } catch (cause) {
+      setSummaryError(cause instanceof Error ? cause.message : 'Unable to summarize this post.');
+    } finally {
+      setSummarizing(false);
+    }
+  };
   const addComment = () => {
     try {
       service.comment(post.id, body);
@@ -82,6 +108,16 @@ export default function PostDiscussion({ post, service, startEditing, onChange, 
             {editing && post.isOwner && <PostEditor initialValue={post}
               onCancel={() => setEditing(false)}
               onSubmit={(input) => { service.update(post.id, input); setEditing(false); onChange(); }} />}
+            <View style={ui.card}>
+              <Text style={ui.title}>Summary</Text>
+              <Pressable accessibilityRole="button" onPress={summarize} disabled={summarizing}
+                style={[ui.button, summarizing && ui.disabled]}>
+                <Text style={ui.buttonText}>{summarizing ? 'Summarizing...' : 'Summarize'}</Text>
+              </Pressable>
+              {!!summaryError && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={ui.error}>{summaryError}</Text>}
+              {!!summary && <Text selectable style={ui.body}>{summary}</Text>}
+              {!!summary && <Text style={ui.muted}>{summaryNote}</Text>}
+            </View>
             <View style={ui.card}>
               <Text style={ui.title}>Comments</Text>
               <TextInput style={[ui.input, styles.commentInput]} accessibilityLabel="Comment"
