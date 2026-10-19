@@ -25,10 +25,15 @@ export async function summarizePost(input: SummarizeInput): Promise<string> {
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json();
+  // an error page from the server or tunnel is not JSON, so don't let it crash
+  const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(data.error ?? 'Could not summarize this post.');
+    throw new Error(data?.error ?? 'The server is not responding. Please try again.');
+  }
+
+  if (typeof data?.summary !== 'string') {
+    throw new Error('The server sent back something we could not read.');
   }
 
   return data.summary;

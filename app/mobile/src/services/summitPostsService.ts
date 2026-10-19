@@ -2,6 +2,7 @@ import type {
   PostInput,
   SummitComment,
   SummitPost,
+  SummitSummary,
 } from '../types/summitPost.types';
 
 export const POST_CATEGORIES = [
@@ -43,6 +44,7 @@ export function validatePost(input: PostInput): PostInput {
 export function createSummitPostsService(author = 'You') {
   const posts = new Map<string, SummitPost>();
   const comments = new Map<string, SummitComment[]>();
+  const summaries = new Map<string, SummitSummary>();
   let nextId = 0;
   const createId = () => `local-${Date.now()}-${++nextId}`;
 
@@ -97,6 +99,7 @@ export function createSummitPostsService(author = 'You') {
       find(id);
       posts.delete(id);
       comments.delete(id);
+      summaries.delete(id);
     },
     vote(id: string, value: -1 | 1): SummitPost {
       const post = find(id);
@@ -126,6 +129,15 @@ export function createSummitPostsService(author = 'You') {
       };
       comments.set(id, [...(comments.get(id) ?? []), comment]);
       return { ...comment };
+    },
+    summary(id: string): SummitSummary | undefined {
+      find(id);
+      return summaries.get(id);
+    },
+    // a new summary replaces the one we had before
+    saveSummary(id: string, text: string, commentCount: number): void {
+      find(id);
+      summaries.set(id, { text, commentCount });
     },
   };
 }

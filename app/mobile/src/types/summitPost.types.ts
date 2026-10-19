@@ -17,6 +17,12 @@ export type SummitPost = PostInput & {
   commentCount: number;
 };
 
+// The last summary we got back for a post.
+export type SummitSummary = {
+  text: string;
+  commentCount: number;
+};
+
 export type SummitComment = {
   id: string;
   postId: string;

@@ -23,11 +23,11 @@ export default function PostDiscussion({ post, service, startEditing, onChange, 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [body, setBody] = useState('');
   const [error, setError] = useState('');
-  const [summary, setSummary] = useState('');
-  const [summaryNote, setSummaryNote] = useState('');
   const [summarizing, setSummarizing] = useState(false);
   const [summaryError, setSummaryError] = useState('');
   const comments = service.comments(post.id);
+  // the service remembers it, so it is still here when the post is reopened
+  const summary = service.summary(post.id);
   const summarize = async () => {
     setSummarizing(true);
     setSummaryError('');
@@ -39,10 +39,7 @@ export default function PostDiscussion({ post, service, startEditing, onChange, 
         description: post.description,
         comments: commentTexts,
       });
-      setSummary(text);
-      setSummaryNote(commentTexts.length
-        ? `Based on the post and ${commentTexts.length} ${commentTexts.length === 1 ? 'comment' : 'comments'}.`
-        : 'Based on the post only.');
+      service.saveSummary(post.id, text, commentTexts.length);
     } catch (cause) {
       setSummaryError(cause instanceof Error ? cause.message : 'Unable to summarize this post.');
     } finally {
@@ -115,8 +112,12 @@ export default function PostDiscussion({ post, service, startEditing, onChange, 
                 <Text style={ui.buttonText}>{summarizing ? 'Summarizing...' : 'Summarize'}</Text>
               </Pressable>
               {!!summaryError && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={ui.error}>{summaryError}</Text>}
-              {!!summary && <Text selectable style={ui.body}>{summary}</Text>}
-              {!!summary && <Text style={ui.muted}>{summaryNote}</Text>}
+              {!!summary && <Text selectable style={ui.body}>{summary.text}</Text>}
+              {!!summary && <Text style={ui.muted}>
+                {summary.commentCount
+                  ? `Based on the post and ${summary.commentCount} ${summary.commentCount === 1 ? 'comment' : 'comments'}.`
+                  : 'Based on the post only.'}
+              </Text>}
             </View>
             <View style={ui.card}>
               <Text style={ui.title}>Comments</Text>
