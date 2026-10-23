@@ -23,7 +23,7 @@ test('POST /api/auth/login logs in an existing user', async () => {
   assert.equal(typeof response.body.token, 'string');
 });
 
-test('POST /api/auth/login returns 500 for invalid credentials', async () => {
+test('POST /api/auth/login returns 401 for invalid credentials', async () => {
   const suffix = Date.now();
   const user = {
     email: `invalidtest-${suffix}@example.com`,
@@ -37,7 +37,7 @@ test('POST /api/auth/login returns 500 for invalid credentials', async () => {
     password: 'wrongpassword',
   });
 
-  assert.equal(response.status, 500);
+  assert.equal(response.status, 401);
 });
 
 test('GET /api/auth/me returns the authenticated user', async () => {

@@ -1,12 +1,12 @@
-import { HTTP_METHOD } from "../common/http.js";
-import { AUTH_PATHS } from "./auth.paths.js";
+import { HTTP_METHOD } from '../common/http.js';
+import { AUTH_PATHS } from './auth.paths.js';
 import {
   AuthResponseSchema,
   LoginRequestSchema,
   MeRequestSchema,
   MeResponseSchema,
   RegisterRequestSchema,
-} from "./auth.schemas.js";
+} from './auth.schemas.js';
 
 export const AUTH_CONTRACTS = {
   login: {

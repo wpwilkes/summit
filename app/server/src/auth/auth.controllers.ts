@@ -1,4 +1,6 @@
-import { getMe, loginService, registerService } from './auth.service.js';
+import { AppError } from '../errors/app.error.js';
+import type { BodyRequest } from '../types/requests.js';
+import { getMe, loginService, registerService } from './auth.services.js';
 import {
   AUTH_CONTRACTS,
   type LoginRequest,
@@ -8,79 +10,42 @@ import {
   type RegisterRequest,
   type RegisterResponse,
 } from '@summit/shared';
-import type { Request, Response } from 'express';
-
-type BodyRequest<T> = Request<Record<string, never>, unknown, T>;
-
-type ErrorResponse = {
-  error: string;
-};
+import type { Response } from 'express';
 
 export async function loginController(
   request: BodyRequest<LoginRequest>,
-  response: Response<LoginResponse | ErrorResponse>,
+  response: Response<LoginResponse>,
 ): Promise<void> {
   const parsed = AUTH_CONTRACTS.login.requestBody.safeParse(request.body);
   if (!parsed.success) {
-    response.status(400).json({
-      error: 'Invalid login request. Failed to parse.',
-    });
-    return;
+    throw new AppError(400, 'INVALID_REQUEST', 'Invalid login request.');
   }
-  try {
-    const serviceResult = await loginService(parsed.data);
-    const result = AUTH_CONTRACTS.login.responseBody.parse(serviceResult);
-    response.status(200).json(result);
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({
-      error: 'Login error: service failed.',
-    });
-  }
+  const serviceResult = await loginService(parsed.data);
+  const result = AUTH_CONTRACTS.login.responseBody.parse(serviceResult);
+  response.status(200).json(result);
 }
 
 export async function meController(
-  req: BodyRequest<MeRequest>,
-  res: Response<MeResponse | ErrorResponse>,
+  request: BodyRequest<MeRequest>,
+  response: Response<MeResponse>,
 ): Promise<void> {
-  try {
-    if (req.userId == undefined) {
-      res.status(401).json({
-        error: 'Unauthorized',
-      });
-      return;
-    }
-
-    const serviceResult = await getMe(req.userId);
-    const result = AUTH_CONTRACTS.me.responseBody.parse(serviceResult);
-    res.status(200).json(result);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      error: 'Internal server error',
-    });
+  if (request.userId === undefined) {
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
   }
+  const serviceResult = await getMe(request.userId);
+  const result = AUTH_CONTRACTS.me.responseBody.parse(serviceResult);
+  response.status(200).json(result);
 }
 
 export async function registerController(
   request: BodyRequest<RegisterRequest>,
-  response: Response<RegisterResponse | ErrorResponse>,
+  response: Response<RegisterResponse>,
 ): Promise<void> {
   const parsed = AUTH_CONTRACTS.register.requestBody.safeParse(request.body);
   if (!parsed.success) {
-    response.status(400).json({
-      error: 'Invalid registration request. Failed to parse.',
-    });
-    return;
+    throw new AppError(400, 'INVALID_REQUEST', 'Invalid registration request.');
   }
-  try {
-    const serviceResult = await registerService(parsed.data);
-    const result = AUTH_CONTRACTS.register.responseBody.parse(serviceResult);
-    response.status(201).json(result);
-  } catch (error) {
-    console.error(error);
-    response.status(500).json({
-      error: 'Registration error: service failed.',
-    });
-  }
+  const serviceResult = await registerService(parsed.data);
+  const result = AUTH_CONTRACTS.register.responseBody.parse(serviceResult);
+  response.status(201).json(result);
 }
