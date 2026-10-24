@@ -41,7 +41,7 @@ export default function HomeScreen({ navigation }: Props) {
       if (!mounted.current) return;
       setReady(false);
       // Reset removes the signed-in screen and its in-memory posts/drafts.
-      navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
     } catch {
       if (mounted.current) setLogoutError('Unable to log out. Please try again.');
     } finally {

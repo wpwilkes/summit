@@ -1,102 +1,264 @@
-import { useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  BackHandler,
+  FlatList,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import CategoryPicker from '../components/posts/CategoryPicker';
 import PostDiscussion from '../components/posts/PostDiscussion';
 import PostEditor from '../components/posts/PostEditor';
+import PostIcon from '../components/posts/PostIcon';
+import PostsDestination from '../components/posts/PostsDestination';
+import PostsHeader from '../components/posts/PostsHeader';
+import PostsSidebar, {
+  type PostsDestinationName,
+} from '../components/posts/PostsSidebar';
 import SummitPostCard from '../components/posts/SummitPostCard';
 import { colors, ui } from '../components/posts/postsTheme';
-import { createSummitPostsService } from '../services/summitPostsService';
+import {
+  createSummitPostsService,
+  type SummitPostsService,
+} from '../services/summitPostsService';
+import { getPostsUsername } from '../services/summitProfileService';
 
 type Props = { onLogout: () => void; loggingOut: boolean; logoutError: string };
+type EditorState = { id?: string; returnTo: 'feed' | 'discussion' } | null;
 
-export default function SummitPostsScreen({ onLogout, loggingOut, logoutError }: Props) {
-  const [service] = useState(() => createSummitPostsService());
-  const [category, setCategory] = useState('');
+export default function SummitPostsScreen({
+  onLogout,
+  loggingOut,
+  logoutError,
+}: Props) {
+  const [service, setService] = useState<SummitPostsService | null>(null);
+  const [profileError, setProfileError] = useState('');
+  const [retry, setRetry] = useState(0);
   const [revision, setRevision] = useState(0);
-  const [detail, setDetail] = useState<{ id: string; editing: boolean } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editor, setEditor] = useState<EditorState>(null);
+  const [sidebar, setSidebar] = useState(false);
+  const [destination, setDestination] = useState<PostsDestinationName | null>(
+    null,
+  );
   const [error, setError] = useState('');
   const refresh = () => setRevision((value) => value + 1);
-  const posts = service.list(category);
-  const selectedPost = detail ? service.get(detail.id) : null;
-  const header = (
-    <View style={styles.listHeader}>
-      <View style={ui.card}>
-        <Text style={ui.label}>Demo workspace</Text>
-        <Text style={ui.muted}>Posts, comments, and votes are temporary. They reset when you reload the app or log out.</Text>
-      </View>
-      <CategoryPicker label="Filter" includeAll value={category} disabled={loggingOut}
-        onChange={(value) => { setCategory(value); setError(''); }} />
-      <View style={ui.between}>
-        <View style={styles.heading}>
-          <Text style={styles.eyebrow}>SUMMIT COMMUNITY</Text>
-          <Text style={styles.feedTitle}>{category || 'Home feed'}</Text>
-        </View>
-        <Text style={ui.muted}>{posts.length} {posts.length === 1 ? 'post' : 'posts'}</Text>
-      </View>
-      <PostEditor disabled={loggingOut} onSubmit={(input) => {
-        service.create(input);
-        if (category) setCategory(input.category);
-        setError('');
-        refresh();
-      }} />
-      {!!error && <Text style={ui.error} accessibilityRole="alert">{error}</Text>}
-    </View>
-  );
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    getPostsUsername(controller.signal)
+      .then((username) => {
+        if (active) setService(createSummitPostsService(username));
+      })
+      .catch((cause) => {
+        if (active)
+          setProfileError(
+            controller.signal.aborted
+              ? 'Could not reach the server. Check your connection and try again.'
+              : cause instanceof Error
+                ? cause.message
+                : 'Could not load your profile. Please try again.',
+          );
+      })
+      .finally(() => clearTimeout(timeout));
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [retry]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const listener = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (editor) {
+        setEditor(null);
+        return true;
+      }
+      if (selectedId) {
+        setSelectedId(null);
+        return true;
+      }
+      if (destination) {
+        setDestination(null);
+        return true;
+      }
+      return false;
+    });
+    return () => listener.remove();
+  }, [editor, selectedId, destination]);
+
+  const act = (action: () => void) => {
+    if (loggingOut) return;
+    try {
+      action();
+      refresh();
+      setError('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Please try again.');
+    }
+  };
+  const deletePost = (id: string) =>
+    act(() => {
+      service?.remove(id);
+      setSelectedId(null);
+      setEditor(null);
+    });
+  const selectedPost = service && selectedId ? service.get(selectedId) : null;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <View style={styles.brand}>
-          <View style={styles.logo}><Text style={styles.logoText}>S</Text></View>
-          <View><Text style={styles.brandName}>summit</Text><Text style={ui.muted}>Your posts</Text></View>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Log out"
-          accessibilityState={{ disabled: loggingOut, busy: loggingOut }}
-          disabled={loggingOut} onPress={onLogout} style={[ui.button, loggingOut && ui.disabled]}>
-          <Text style={ui.buttonText}>{loggingOut ? 'Logging out…' : 'Log out'}</Text>
-        </Pressable>
-      </View>
-      {!!logoutError && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={[ui.error, styles.logoutError]}>{logoutError}</Text>}
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <FlatList data={posts} extraData={revision} keyExtractor={(post) => post.id}
-          ListHeaderComponent={header}
-          renderItem={({ item }) => <SummitPostCard post={item} disabled={loggingOut}
-            onOpen={() => setDetail({ id: item.id, editing: false })}
-            onEdit={() => setDetail({ id: item.id, editing: true })}
-            onVote={(value) => {
-              try { service.vote(item.id, value); refresh(); setError(''); }
-              catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to vote.'); }
-            }} />}
-          ItemSeparatorComponent={PostSeparator}
-          ListEmptyComponent={<View style={[ui.card, styles.empty]}>
-            <Text style={ui.label}>No posts yet</Text>
-            <Text style={ui.muted}>{category ? `Start a discussion in ${category}.` : 'Publish the first one.'}</Text>
-          </View>}
-          contentContainerStyle={styles.list}
-          keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" />
-      </KeyboardAvoidingView>
-      {detail && selectedPost && <PostDiscussion key={detail.id} post={selectedPost} service={service}
-        startEditing={detail.editing} onClose={() => setDetail(null)} onChange={refresh} />}
+    <SafeAreaView style={ui.page}>
+      <StatusBar style="dark" />
+      {!!logoutError && (
+        <Text accessibilityRole="alert" style={[ui.error, styles.error]}>
+          {logoutError}
+        </Text>
+      )}
+      {!!error && (
+        <Text accessibilityRole="alert" style={[ui.error, styles.error]}>
+          {error}
+        </Text>
+      )}
+      {editor && service ? (
+        <PostEditor
+          key={editor.id ?? 'new'}
+          initialValue={editor.id ? service.get(editor.id) : undefined}
+          disabled={loggingOut}
+          onCancel={() => setEditor(null)}
+          onSubmit={(input) => {
+            if (editor.id) service.update(editor.id, input);
+            else service.create(input);
+            if (editor.returnTo === 'feed') setSelectedId(null);
+            setEditor(null);
+            setError('');
+            refresh();
+          }}
+        />
+      ) : selectedPost && service ? (
+        <PostDiscussion
+          post={selectedPost}
+          service={service}
+          disabled={loggingOut}
+          onChange={refresh}
+          onClose={() => setSelectedId(null)}
+          onEditPost={() =>
+            setEditor({ id: selectedPost.id, returnTo: 'discussion' })
+          }
+          onDeletePost={() => deletePost(selectedPost.id)}
+        />
+      ) : (
+        <>
+          <PostsHeader
+            onMenu={() => setSidebar(true)}
+            onCreate={() => {
+              setDestination(null);
+              setEditor({ returnTo: 'feed' });
+            }}
+            disabled={loggingOut || !service}
+          />
+          {destination ? (
+            <PostsDestination
+              destination={destination}
+              onBack={() => setDestination(null)}
+            />
+          ) : !service ? (
+            <View style={styles.empty}>
+              {profileError ? (
+                <>
+                  <Text
+                    accessibilityRole="alert"
+                    style={[ui.error, styles.center]}
+                  >
+                    {profileError}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setProfileError('');
+                      setRetry((value) => value + 1);
+                    }}
+                    style={ui.button}
+                  >
+                    <Text style={ui.buttonText}>Retry</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <ActivityIndicator color={colors.accent} />
+                  <Text style={ui.muted}>Loading your profile…</Text>
+                </>
+              )}
+            </View>
+          ) : (
+            <FlatList
+              data={service.list()}
+              extraData={revision}
+              keyExtractor={(post) => post.id}
+              contentContainerStyle={[ui.constrained, styles.list]}
+              ItemSeparatorComponent={PostSeparator}
+              ListEmptyComponent={
+                <View style={styles.empty}>
+                  <PostIcon name="comment" size={42} color={colors.muted} />
+                  <Text style={ui.title}>Start the conversation</Text>
+                  <Text style={ui.muted}>
+                    Tap + to share a message or a photo.
+                  </Text>
+                </View>
+              }
+              renderItem={({ item }) => (
+                <SummitPostCard
+                  post={item}
+                  disabled={loggingOut}
+                  onOpen={() => setSelectedId(item.id)}
+                  onEdit={() => setEditor({ id: item.id, returnTo: 'feed' })}
+                  onDelete={() => deletePost(item.id)}
+                  onVote={(value) =>
+                    act(() => {
+                      service.vote(item.id, value);
+                    })
+                  }
+                />
+              )}
+            />
+          )}
+        </>
+      )}
+      <PostsSidebar
+        visible={sidebar}
+        onClose={() => setSidebar(false)}
+        loggingOut={loggingOut}
+        onLogout={onLogout}
+        onNavigate={(next) => {
+          setSidebar(false);
+          setDestination(next);
+          setSelectedId(null);
+          setEditor(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
 
-function PostSeparator() { return <View style={styles.separator} />; }
+function PostSeparator() {
+  return <View style={ui.separator} />;
+}
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  header: { width: '100%', maxWidth: 1000, alignSelf: 'center', padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
-  logo: { width: 40, height: 40, borderRadius: 6, backgroundColor: colors.accent, justifyContent: 'center', alignItems: 'center' },
-  logoText: { fontSize: 22, fontWeight: '800', color: colors.onAccent },
-  brandName: { color: colors.text, fontSize: 23, fontWeight: '700' },
-  list: { width: '100%', maxWidth: 1000, alignSelf: 'center', padding: 16, paddingBottom: 40 },
-  listHeader: { gap: 16, paddingBottom: 16 },
-  heading: { flexShrink: 1, gap: 4 },
-  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '700', letterSpacing: 1.4 },
-  feedTitle: { color: colors.text, fontSize: 27, fontWeight: '700' },
-  empty: { alignItems: 'center', paddingVertical: 32 },
-  separator: { height: 14 },
-  logoutError: { paddingHorizontal: 16, paddingTop: 12 },
+  list: { flexGrow: 1, paddingBottom: 28 },
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 28,
+    minHeight: 280,
+  },
+  error: { paddingHorizontal: 16, paddingVertical: 8 },
+  center: { textAlign: 'center' },
 });
