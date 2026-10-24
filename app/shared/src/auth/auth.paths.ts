@@ -1,7 +1,7 @@
-const AUTH_BASE = "/api/auth";
+import { BASE_PATHS } from '../common/base.paths.js';
 
 export const AUTH_PATHS = {
-  login: `${AUTH_BASE}/login`,
-  me: `${AUTH_BASE}/me`,
-  register: `${AUTH_BASE}/register`,
+  login: `${BASE_PATHS.auth}/login`,
+  me: `${BASE_PATHS.auth}/me`,
+  register: `${BASE_PATHS.auth}/register`,
 } as const;

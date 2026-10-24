@@ -1,11 +1,11 @@
-import { HTTP_METHOD } from "../common/http.js";
-import { PING_PATHS } from "./ping.paths.js";
+import { HTTP_METHOD } from '../common/http.js';
+import { PING_PATHS } from './ping.paths.js';
 import {
   PingDatabaseRequestSchema,
   PingDatabaseResponseSchema,
   PingServerRequestSchema,
   PingServerResponseSchema,
-} from "./ping.schemas.js";
+} from './ping.schemas.js';
 
 export const PING_CONTRACTS = {
   database: {

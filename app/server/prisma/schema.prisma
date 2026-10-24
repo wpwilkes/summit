@@ -16,6 +16,8 @@ model User {
 
   posts        Post[]
   comments     Comment[]
+  postVotes PostVote[]
+  commentVotes CommentVote[]
 
   @@map("users")
 }
@@ -31,21 +33,30 @@ model Post {
   author    User      @relation(fields: [authorId], references: [id])
   comments  Comment[]
   summaries Summary[]
+  postVotes PostVote[]
 
   @@map("posts")
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
-  postId    Int      @map("post_id")
-  authorId  Int      @map("author_id")
+  id        Int       @id @default(autoincrement())
+  postId    Int       @map("post_id")
+  authorId  Int       @map("author_id")
+  parentId  Int?      @map("parent_id")
   body      String
-  vote      Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
+  vote      Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
 
-  post      Post     @relation(fields: [postId], references: [id])
-  author    User     @relation(fields: [authorId], references: [id])
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
 
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  commentVotes CommentVote[]
+
+  @@index([postId, createdAt])
+  @@index([parentId])
   @@map("comments")
 }
 
@@ -59,4 +70,28 @@ model Summary {
   post         Post     @relation(fields: [postId], references: [id])
 
   @@map("summaries")
+}
+
+model PostVote {
+  postId Int @map("post_id")
+  userId Int @map("user_id")
+  value  Int
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@map("post_votes")
+}
+
+model CommentVote {
+  commentId Int @map("comment_id")
+  userId    Int @map("user_id")
+  value     Int
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
+  @@map("comment_votes")
 }

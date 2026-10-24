@@ -1,3 +1,4 @@
+import { AppError } from '../errors/app.error.js';
 import {
   createUser,
   findByEmail,
@@ -32,7 +33,6 @@ function createToken(sub: string): string {
   if (!secret) {
     throw new Error('`JWT_SECRET` is not configured.');
   }
-
   const payload: TokenPayload = {
     sub: sub,
   };
@@ -55,20 +55,16 @@ export async function loginService(
 ): Promise<LoginResponse> {
   const email = request.email.trim().toLowerCase();
   const user = await findByEmail(email);
-
   if (!user) {
-    throw new Error(`Cannot find user with email=${email}.`);
+    throw new AppError(401, 'INVALID_CREDENTIALS', 'Invalid email.');
   }
-
   const passwordIsValid = await argon2.verify(
     user.passwordHash,
     request.password,
   );
-
   if (!passwordIsValid) {
-    throw new Error('Invalid password.');
+    throw new AppError(401, 'INVALID_CREDENTIALS', 'Invalid password.');
   }
-
   return {
     user: toUserContract(user),
     token: createToken(user.id.toString()),
@@ -78,7 +74,7 @@ export async function loginService(
 export async function getMe(userId: number): Promise<MeResponse> {
   const user = await findById(userId);
   if (!user) {
-    throw new Error(`Cannot find user with id=${userId}.`);
+    throw new AppError(404, 'USER_NOT_FOUND', 'User not found.');
   }
   return {
     user: toUserContract(user),
@@ -90,20 +86,16 @@ export async function registerService(
 ): Promise<RegisterResponse> {
   const email = request.email.trim().toLowerCase();
   const username = request.username.trim();
-
   const existingEmail = await findByEmail(email);
   if (existingEmail) {
-    throw new Error(`Email already exists: ${email}`);
+    throw new AppError(409, 'EMAIL_TAKEN', 'Email already registered.');
   }
-
   const existingUsername = await findByUsername(username);
   if (existingUsername) {
-    throw new Error(`Username already exists: ${username}`);
+    throw new AppError(409, 'USERNAME_TAKEN', 'Username already taken.');
   }
-
   const passwordHash = await argon2.hash(request.password);
   const user = await createUser(email, username, passwordHash);
-
   return {
     user: toUserContract(user),
     token: createToken(user.id.toString()),

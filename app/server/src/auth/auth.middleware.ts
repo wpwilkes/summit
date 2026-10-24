@@ -1,53 +1,48 @@
+import { AppError } from '../errors/app.error.js';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 export function requireAuth(
   request: Request,
-  response: Response,
+  _response: Response,
   next: NextFunction,
-) {
+): void {
   const authHeader = request.headers.authorization;
   if (!authHeader) {
-    return response.status(401).json({
-      error: 'Authentication required.',
-    });
+    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
   }
 
-  const [scheme, token] = authHeader.split(' ');
-  if (scheme !== 'Bearer' || !token) {
-    return response.status(401).json({
-      error: 'Invalid authorization header.',
-    });
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer' || !parts[1]) {
+    throw new AppError(
+      401,
+      'INVALID_AUTH_HEADER',
+      'Invalid authorization header.',
+    );
   }
 
+  const token = parts[1];
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    return response.status(500).json({
-      error: 'Server authentication configuration error.',
-    });
+    throw new Error('JWT_SECRET is not configured.');
   }
 
+  let payload: jwt.JwtPayload | string;
   try {
-    const payload = jwt.verify(token, secret);
-    if (typeof payload === 'string' || typeof payload.sub !== 'string') {
-      return response.status(401).json({
-        error: 'Invalid token.',
-      });
-    }
-
-    const userId = Number(payload.sub);
-    if (!Number.isInteger(userId)) {
-      return response.status(401).json({
-        error: 'Invalid token.',
-      });
-    }
-
-    request.userId = userId;
-
-    next();
+    payload = jwt.verify(token, secret);
   } catch {
-    return response.status(401).json({
-      error: 'Invalid or expired token.',
-    });
+    throw new AppError(401, 'INVALID_TOKEN', 'Invalid or expired token.');
   }
+
+  if (typeof payload === 'string' || typeof payload.sub !== 'string') {
+    throw new AppError(401, 'INVALID_TOKEN', 'Invalid token.');
+  }
+
+  const userId = Number(payload.sub);
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    throw new AppError(401, 'INVALID_TOKEN', 'Invalid token.');
+  }
+  request.userId = userId;
+
+  next();
 }

@@ -1,6 +1,6 @@
-const PING_BASE = "/api/ping";
+import { BASE_PATHS } from '../common/base.paths.js';
 
 export const PING_PATHS = {
-  database: `${PING_BASE}/database`,
-  server: `${PING_BASE}/server`,
+  database: `${BASE_PATHS.ping}/database`,
+  server: `${BASE_PATHS.ping}/server`,
 } as const;
