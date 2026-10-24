@@ -1,5 +1,11 @@
-import { useRef, useState } from 'react';
 import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
+import {
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +16,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -46,11 +54,47 @@ export default function EmailVerificationScreen({
   const [isResending, setIsResending] =
     useState(false);
 
+  const [keyboardVisible, setKeyboardVisible] =
+    useState(false);
+
   const codeInputRef = useRef<TextInput>(null);
 
-  const handleCodeChange = (value: string) => {
-    // Allow numbers only.
-    const numericValue = value.replace(/[^0-9]/g, '');
+  const scrollViewRef =
+    useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showSubscription =
+      Keyboard.addListener(
+        'keyboardDidShow',
+        () => {
+          setKeyboardVisible(true);
+        }
+      );
+
+    const hideSubscription =
+      Keyboard.addListener(
+        'keyboardDidHide',
+        () => {
+          setKeyboardVisible(false);
+
+          scrollViewRef.current?.scrollTo({
+            y: 0,
+            animated: true,
+          });
+        }
+      );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const handleCodeChange = (
+    value: string
+  ) => {
+    const numericValue =
+      value.replace(/[^0-9]/g, '');
 
     setVerificationCode(numericValue);
 
@@ -68,17 +112,21 @@ export default function EmailVerificationScreen({
 
     if (!verificationCode) {
       setSuccessMessage('');
+
       setErrorMessage(
         'Please enter the verification code.'
       );
+
       return;
     }
 
     if (verificationCode.length !== 6) {
       setSuccessMessage('');
+
       setErrorMessage(
         'Verification code must be 6 digits.'
       );
+
       return;
     }
 
@@ -88,13 +136,13 @@ export default function EmailVerificationScreen({
 
     try {
       /*
-       * MOCK AUTHENTICATION CALL
+       * TEMPORARY MOCK VERIFICATION
        *
-       * For now, verifyEmail() uses the
-       * temporary mock authentication service.
+       * For now, verifyEmail() checks the
+       * temporary mock code.
        *
-       * Later, authService.ts will send the same
-       * request to Wesley's real backend.
+       * This will later be replaced with
+       * the real backend verification endpoint.
        */
       const response = await verifyEmail({
         email,
@@ -102,21 +150,31 @@ export default function EmailVerificationScreen({
       });
 
       if (!response.success) {
-        setErrorMessage(response.message);
+        setErrorMessage(
+          response.message
+        );
+
         return;
       }
 
       setSuccessMessage(
-        `${response.message} Redirecting to Login...`
+        response.message
       );
 
       /*
-       * Login is the first screen in our auth stack,
-       * so return to it after successful verification.
+       * After successful verification,
+       * go directly to Login.
        */
       setTimeout(() => {
-        navigation.popToTop();
-      }, 1200);
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'Login',
+            },
+          ],
+        });
+      }, 1000);
     } catch {
       setErrorMessage(
         'Unable to verify email. Please try again.'
@@ -134,28 +192,28 @@ export default function EmailVerificationScreen({
     setIsResending(true);
 
     try {
-      /*
-       * MOCK AUTHENTICATION CALL
-       *
-       * Later this same service function will call
-       * Wesley's real resend-verification API.
-       */
       const response =
         await resendVerificationCode({
           email,
         });
 
       if (!response.success) {
-        setErrorMessage(response.message);
+        setErrorMessage(
+          response.message
+        );
+
         return;
       }
 
       setVerificationCode('');
-      setSuccessMessage(response.message);
+
+      setSuccessMessage(
+        response.message
+      );
 
       setTimeout(() => {
         codeInputRef.current?.focus();
-      }, 100);
+      }, 150);
     } catch {
       setErrorMessage(
         'Unable to resend the verification code. Please try again.'
@@ -168,134 +226,268 @@ export default function EmailVerificationScreen({
   return (
     <SafeAreaView
       style={styles.safeArea}
-      edges={['left', 'right', 'bottom']}
+      edges={['top', 'bottom']}
     >
+      <StatusBar style="dark" />
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={
           Platform.OS === 'ios'
             ? 'padding'
-            : 'height'
+            : undefined
         }
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          ref={scrollViewRef}
+          contentContainerStyle={
+            styles.content
+          }
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={
+            false
+          }
         >
-          <View style={styles.brandContainer}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
-
-            <Text style={styles.brandName}>
-              Summit
-            </Text>
-          </View>
-
-          <Text style={styles.title}>
-            Verify Your Email
-          </Text>
-
-          <Text style={styles.subtitle}>
-            We sent a verification code to:
-          </Text>
-
-          <Text style={styles.emailText}>
-            {email}
-          </Text>
+          {/* Back */}
 
           <Pressable
-            style={styles.codeContainer}
+            style={styles.backButton}
+            onPress={() =>
+              navigation.goBack()
+            }
+            accessibilityRole="button"
+          >
+            <Text
+              style={
+                styles.backButtonText
+              }
+            >
+              ←
+            </Text>
+          </Pressable>
+
+          {/* Full header */}
+
+          {!keyboardVisible && (
+            <>
+              <View
+                style={
+                  styles.logoContainer
+                }
+              >
+                <Image
+                  source={require('../assets/reddit-icon-1.jpg')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+
+                <Text
+                  style={
+                    styles.brandName
+                  }
+                >
+                  SUMMIT
+                </Text>
+              </View>
+
+              <Text
+                style={styles.title}
+              >
+                Verify your email
+              </Text>
+
+              <Text
+                style={
+                  styles.subtitle
+                }
+              >
+                We sent a 6-digit
+                verification code to
+              </Text>
+
+              <Text
+                style={
+                  styles.emailText
+                }
+              >
+                {email}
+              </Text>
+            </>
+          )}
+
+          {/* Compact header while keyboard open */}
+
+          {keyboardVisible && (
+            <>
+              <Text
+                style={
+                  styles.compactTitle
+                }
+              >
+                Verify your email
+              </Text>
+
+              <Text
+                style={
+                  styles.compactEmail
+                }
+              >
+                {email}
+              </Text>
+            </>
+          )}
+
+          {/* Verification code */}
+
+          <Pressable
+            style={
+              styles.codeContainer
+            }
             onPress={() =>
               codeInputRef.current?.focus()
             }
+            accessibilityRole="button"
           >
-            {Array.from({ length: 6 }).map(
-              (_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.codeBox,
-                    verificationCode.length ===
-                    index
-                      ? styles.activeCodeBox
-                      : null,
-                  ]}
+            {Array.from({
+              length: 6,
+            }).map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.codeBox,
+
+                  verificationCode.length ===
+                  index
+                    ? styles.activeCodeBox
+                    : null,
+
+                  verificationCode[index]
+                    ? styles.filledCodeBox
+                    : null,
+                ]}
+              >
+                <Text
+                  style={
+                    styles.codeDigit
+                  }
                 >
-                  <Text style={styles.codeDigit}>
-                    {verificationCode[index] ??
-                      ''}
-                  </Text>
-                </View>
-              )
-            )}
+                  {verificationCode[
+                    index
+                  ] ?? ''}
+                </Text>
+              </View>
+            ))}
           </Pressable>
 
           <TextInput
             ref={codeInputRef}
             style={styles.hiddenInput}
             value={verificationCode}
-            onChangeText={handleCodeChange}
+            onChangeText={
+              handleCodeChange
+            }
             keyboardType="number-pad"
             maxLength={6}
             returnKeyType="done"
-            onSubmitEditing={handleVerify}
+            onSubmitEditing={
+              handleVerify
+            }
           />
 
+          {/* Error */}
+
           {errorMessage !== '' && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
+            <View
+              style={
+                styles.errorContainer
+              }
+            >
+              <Text
+                style={
+                  styles.errorText
+                }
+              >
                 {errorMessage}
               </Text>
             </View>
           )}
 
+          {/* Success */}
+
           {successMessage !== '' && (
-            <View style={styles.successContainer}>
-              <Text style={styles.successText}>
+            <View
+              style={
+                styles.successContainer
+              }
+            >
+              <Text
+                style={
+                  styles.successText
+                }
+              >
                 {successMessage}
               </Text>
             </View>
           )}
 
+          {/* Verify */}
+
           <Pressable
             style={[
-              styles.button,
-              isVerifying
-                ? styles.buttonDisabled
-                : null,
+              styles.verifyButton,
+
+              isVerifying &&
+                styles.buttonDisabled,
             ]}
             onPress={handleVerify}
             disabled={
-              isVerifying || isResending
+              isVerifying ||
+              isResending
             }
+            accessibilityRole="button"
           >
-            <Text style={styles.buttonText}>
+            <Text
+              style={
+                styles.verifyButtonText
+              }
+            >
               {isVerifying
                 ? 'Verifying...'
                 : 'Verify'}
             </Text>
           </Pressable>
 
-          <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>
-              Didn't receive the code?{' '}
+          {/* Resend */}
+
+          <View
+            style={
+              styles.resendContainer
+            }
+          >
+            <Text
+              style={
+                styles.resendText
+              }
+            >
+              Didn't receive the code?
             </Text>
 
             <Pressable
-              onPress={handleResendCode}
+              onPress={
+                handleResendCode
+              }
               disabled={
-                isResending || isVerifying
+                isResending ||
+                isVerifying
               }
               accessibilityRole="button"
             >
               <Text
                 style={[
                   styles.resendLink,
-                  isResending
-                    ? styles.resendDisabled
-                    : null,
+
+                  isResending &&
+                    styles.resendDisabled,
                 ]}
               >
                 {isResending
@@ -310,179 +502,200 @@ export default function EmailVerificationScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0f0f10',
-  },
+const styles =
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+    },
 
-  container: {
-    flex: 1,
-  },
+    container: {
+      flex: 1,
+    },
 
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
+    content: {
+      flexGrow: 1,
+      paddingHorizontal: 24,
+      paddingTop: 8,
+      paddingBottom: 120,
+    },
 
-  brandContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
+    backButton: {
+      width: 44,
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      marginBottom: 16,
+    },
 
-  logoBox: {
-    width: 38,
-    height: 38,
-    backgroundColor: '#e7c86e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
+    backButtonText: {
+      color: '#1A1A1B',
+      fontSize: 30,
+    },
 
-  logoText: {
-    color: '#111111',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+    logoContainer: {
+      alignItems: 'center',
+      marginBottom: 18,
+    },
 
-  brandName: {
-    color: '#ffffff',
-    fontSize: 26,
-    fontWeight: '600',
-  },
+    logoImage: {
+      width: 54,
+      height: 54,
+      borderRadius: 27,
+      marginBottom: 8,
+    },
 
-  title: {
-    color: '#ffffff',
-    fontSize: 30,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
+    brandName: {
+      color: '#1A1A1B',
+      fontSize: 18,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
 
-  subtitle: {
-    color: '#999999',
-    fontSize: 15,
-    textAlign: 'center',
-    marginTop: 10,
-  },
+    title: {
+      color: '#1A1A1B',
+      fontSize: 30,
+      lineHeight: 36,
+      fontWeight: '800',
+      textAlign: 'center',
+    },
 
-  emailText: {
-    color: '#e7c86e',
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 32,
-  },
+    subtitle: {
+      color: '#576F76',
+      fontSize: 15,
+      lineHeight: 21,
+      textAlign: 'center',
+      marginTop: 10,
+    },
 
-  codeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
+    emailText: {
+      color: '#1A1A1B',
+      fontSize: 15,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginTop: 5,
+      marginBottom: 34,
+    },
 
-  codeBox: {
-    width: 44,
-    height: 54,
-    backgroundColor: '#19191c',
-    borderWidth: 1,
-    borderColor: '#333333',
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+    compactTitle: {
+      color: '#1A1A1B',
+      fontSize: 24,
+      fontWeight: '800',
+      marginBottom: 6,
+    },
 
-  activeCodeBox: {
-    borderColor: '#e7c86e',
-  },
+    compactEmail: {
+      color: '#576F76',
+      fontSize: 14,
+      marginBottom: 24,
+    },
 
-  codeDigit: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '600',
-  },
+    codeContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
 
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0,
-    width: 1,
-    height: 1,
-  },
+    codeBox: {
+      width: 46,
+      height: 58,
+      backgroundColor: '#F2F2F2',
+      borderWidth: 1,
+      borderColor: '#E5E5E5',
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  errorContainer: {
-    backgroundColor: '#2a1717',
-    borderWidth: 1,
-    borderColor: '#8a3d3d',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 10,
-    marginBottom: 4,
-  },
+    activeCodeBox: {
+      borderWidth: 2,
+      borderColor: '#1A1A1B',
+    },
 
-  errorText: {
-    color: '#ffb4b4',
-    fontSize: 13,
-    textAlign: 'center',
-  },
+    filledCodeBox: {
+      backgroundColor: '#F7F7F7',
+    },
 
-  successContainer: {
-    backgroundColor: '#17271d',
-    borderWidth: 1,
-    borderColor: '#3d7950',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 10,
-    marginBottom: 4,
-  },
+    codeDigit: {
+      color: '#1A1A1B',
+      fontSize: 22,
+      fontWeight: '700',
+    },
 
-  successText: {
-    color: '#a8e6b8',
-    fontSize: 13,
-    textAlign: 'center',
-  },
+    hiddenInput: {
+      position: 'absolute',
+      opacity: 0,
+      width: 1,
+      height: 1,
+    },
 
-  button: {
-    backgroundColor: '#e7c86e',
-    paddingVertical: 15,
-    borderRadius: 4,
-    alignItems: 'center',
-    marginTop: 20,
-  },
+    errorContainer: {
+      backgroundColor: '#FFF3F0',
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginTop: 10,
+      marginBottom: 4,
+    },
 
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+    errorText: {
+      color: '#B32D00',
+      fontSize: 13,
+      textAlign: 'center',
+    },
 
-  buttonText: {
-    color: '#111111',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+    successContainer: {
+      backgroundColor: '#F0F8F2',
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginTop: 10,
+      marginBottom: 4,
+    },
 
-  resendContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
-  },
+    successText: {
+      color: '#216E39',
+      fontSize: 13,
+      textAlign: 'center',
+    },
 
-  resendText: {
-    color: '#888888',
-    fontSize: 14,
-  },
+    verifyButton: {
+      minHeight: 54,
+      borderRadius: 27,
+      backgroundColor: '#FF4500',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 22,
+    },
 
-  resendLink: {
-    color: '#e7c86e',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+    verifyButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '700',
+    },
 
-  resendDisabled: {
-    opacity: 0.6,
-  },
-});
+    buttonDisabled: {
+      opacity: 0.55,
+    },
+
+    resendContainer: {
+      alignItems: 'center',
+      marginTop: 24,
+    },
+
+    resendText: {
+      color: '#1A1A1B',
+      fontSize: 14,
+      marginBottom: 6,
+    },
+
+    resendLink: {
+      color: '#1A1A1B',
+      fontSize: 14,
+      fontWeight: '800',
+    },
+
+    resendDisabled: {
+      opacity: 0.5,
+    },
+  });

@@ -12,7 +12,7 @@ import {
 /*
  * AUTHENTICATION SERVICE
  *
- * Register and Login now use the real backend.
+ * Register and Login use the real backend.
  *
  * Email verification, resend verification,
  * forgot password, and reset password are still
@@ -39,10 +39,52 @@ type BackendAuthResponse = {
   token: string;
 };
 
-type BackendErrorResponse = {
-  error?: string;
+type BackendErrorObject = {
+  code?: string;
   message?: string;
 };
+
+type BackendErrorResponse = {
+  error?: string | BackendErrorObject;
+  message?: string;
+};
+
+/*
+ * Return a readable error message from the backend.
+ *
+ * The backend may return either:
+ *
+ * error: "Some error"
+ *
+ * or:
+ *
+ * error: {
+ *   code: "...",
+ *   message: "Some error"
+ * }
+ */
+function getBackendErrorMessage(
+  errorData: BackendErrorResponse,
+  fallbackMessage: string
+): string {
+  if (
+    typeof errorData.error === 'object' &&
+    errorData.error !== null &&
+    errorData.error.message
+  ) {
+    return errorData.error.message;
+  }
+
+  if (typeof errorData.error === 'string') {
+    return errorData.error;
+  }
+
+  if (errorData.message) {
+    return errorData.message;
+  }
+
+  return fallbackMessage;
+}
 
 function getApiBaseUrl(): string {
   if (!API_BASE_URL) {
@@ -86,10 +128,10 @@ export async function registerUser(
 
       return {
         success: false,
-        message:
-          errorData.error ??
-          errorData.message ??
-          'Registration failed. Please try again.',
+        message: getBackendErrorMessage(
+          errorData,
+          'Registration failed. Please try again.'
+        ),
       };
     }
 
@@ -149,17 +191,23 @@ export async function loginUser(
       | BackendErrorResponse;
 
     if (!response.ok) {
+      const errorData =
+        responseData as BackendErrorResponse;
+
       if (response.status === 401) {
         return {
           success: false,
-          message: 'Invalid email or password.',
+          message:
+            'Invalid email or password.',
         };
       }
 
       return {
         success: false,
-        message:
-          'Login failed. Please try again.',
+        message: getBackendErrorMessage(
+          errorData,
+          'Login failed. Please try again.'
+        ),
       };
     }
 
@@ -201,21 +249,28 @@ export async function verifyEmail(
 ): Promise<AuthResponse> {
   await wait(500);
 
-  console.log('Mock email verification request:', {
-    email: data.email,
-    code: data.code,
-  });
+  console.log(
+    'Mock email verification request:',
+    {
+      email: data.email,
+      code: data.code,
+    }
+  );
 
-  if (data.code !== MOCK_VERIFICATION_CODE) {
+  if (
+    data.code !== MOCK_VERIFICATION_CODE
+  ) {
     return {
       success: false,
-      message: 'Invalid verification code.',
+      message:
+        'Invalid verification code.',
     };
   }
 
   return {
     success: true,
-    message: 'Email verified successfully.',
+    message:
+      'Email verified successfully.',
   };
 }
 
@@ -271,20 +326,27 @@ export async function resetPassword(
 ): Promise<AuthResponse> {
   await wait(500);
 
-  console.log('Mock reset password request:', {
-    email: data.email,
-    code: data.code,
-  });
+  console.log(
+    'Mock reset password request:',
+    {
+      email: data.email,
+      code: data.code,
+    }
+  );
 
-  if (data.code !== MOCK_VERIFICATION_CODE) {
+  if (
+    data.code !== MOCK_VERIFICATION_CODE
+  ) {
     return {
       success: false,
-      message: 'Invalid verification code.',
+      message:
+        'Invalid verification code.',
     };
   }
 
   return {
     success: true,
-    message: 'Password reset successfully.',
+    message:
+      'Password reset successfully.',
   };
 }

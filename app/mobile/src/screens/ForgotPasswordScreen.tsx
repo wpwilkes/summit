@@ -1,5 +1,11 @@
-import { useRef, useState } from 'react';
 import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
+import {
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +16,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -32,9 +40,43 @@ export default function ForgotPasswordScreen({
   const [isSending, setIsSending] =
     useState(false);
 
-  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardVisible, setKeyboardVisible] =
+    useState(false);
 
-  const handleEmailChange = (value: string) => {
+  const scrollViewRef =
+    useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showSubscription =
+      Keyboard.addListener(
+        'keyboardDidShow',
+        () => {
+          setKeyboardVisible(true);
+        }
+      );
+
+    const hideSubscription =
+      Keyboard.addListener(
+        'keyboardDidHide',
+        () => {
+          setKeyboardVisible(false);
+
+          scrollViewRef.current?.scrollTo({
+            y: 0,
+            animated: true,
+          });
+        }
+      );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const handleEmailChange = (
+    value: string
+  ) => {
     setEmail(value);
 
     if (errorMessage) {
@@ -44,10 +86,11 @@ export default function ForgotPasswordScreen({
 
   const scrollFormIntoView = () => {
     setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({
+      scrollViewRef.current?.scrollTo({
+        y: 150,
         animated: true,
       });
-    }, 250);
+    }, 200);
   };
 
   const handleRecovery = async () => {
@@ -58,14 +101,18 @@ export default function ForgotPasswordScreen({
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      setErrorMessage('Email is required.');
+      setErrorMessage(
+        'Email is required.'
+      );
       return;
     }
 
     const emailPattern =
       /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
 
-    if (!emailPattern.test(trimmedEmail)) {
+    if (
+      !emailPattern.test(trimmedEmail)
+    ) {
       setErrorMessage(
         'Please enter a valid email address.'
       );
@@ -76,21 +123,12 @@ export default function ForgotPasswordScreen({
 
     try {
       /*
-       * MOCK AUTHENTICATION CALL
+       * TEMPORARY MOCK PASSWORD RESET
        *
-       * For now, requestPasswordReset() uses
-       * the temporary mock authentication service.
+       * requestPasswordReset() currently uses
+       * the mock authentication service.
        *
-       * Later, authService.ts will send this same
-       * request to Wesley's real backend:
-       *
-       * {
-       *   email
-       * }
-       *
-       * The backend response should remain
-       * privacy-safe and should not reveal
-       * whether the email is registered.
+       * Later this will call the real backend.
        */
       const response =
         await requestPasswordReset({
@@ -98,20 +136,22 @@ export default function ForgotPasswordScreen({
         });
 
       if (!response.success) {
-        setErrorMessage(response.message);
+        setErrorMessage(
+          response.message
+        );
         return;
       }
 
       /*
-       * After the recovery request succeeds,
-       * immediately move to Reset Password.
-       *
-       * The Reset Password screen will show
-       * the permanent recovery-code instruction.
+       * Move to Reset Password after the
+       * recovery request succeeds.
        */
-      navigation.navigate('ResetPassword', {
-        email: trimmedEmail,
-      });
+      navigation.navigate(
+        'ResetPassword',
+        {
+          email: trimmedEmail,
+        }
+      );
     } catch {
       setErrorMessage(
         'Unable to send the recovery code. Please try again.'
@@ -124,51 +164,101 @@ export default function ForgotPasswordScreen({
   return (
     <SafeAreaView
       style={styles.safeArea}
-      edges={['left', 'right', 'bottom']}
+      edges={['top', 'bottom']}
     >
+      <StatusBar style="dark" />
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={
           Platform.OS === 'ios'
             ? 'padding'
-            : 'height'
+            : undefined
         }
-        keyboardVerticalOffset={0}
       >
         <ScrollView
           ref={scrollViewRef}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={
-            Platform.OS === 'ios'
-              ? 'interactive'
-              : 'on-drag'
+          contentContainerStyle={
+            styles.content
           }
-          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={
+            false
+          }
         >
-          <View style={styles.brandContainer}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
+          {/* Back */}
 
-            <Text style={styles.brandName}>
-              Summit
+          <Pressable
+            style={styles.backButton}
+            onPress={() =>
+              navigation.goBack()
+            }
+            accessibilityRole="button"
+          >
+            <Text
+              style={
+                styles.backButtonText
+              }
+            >
+              ←
             </Text>
-          </View>
+          </Pressable>
 
-          <Text style={styles.title}>
-            Forgot Password
-          </Text>
+          {/* Full header */}
 
-          <Text style={styles.subtitle}>
-            Enter the email associated with your
-            account and we will send a password
-            recovery code.
-          </Text>
+          {!keyboardVisible && (
+            <>
+              <View
+                style={
+                  styles.logoContainer
+                }
+              >
+                <Image
+                  source={require('../assets/reddit-icon-1.jpg')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
 
-          <Text style={styles.label}>
-            Email
-          </Text>
+                <Text
+                  style={
+                    styles.brandName
+                  }
+                >
+                  SUMMIT
+                </Text>
+              </View>
+
+              <Text
+                style={styles.title}
+              >
+                Reset your password
+              </Text>
+
+              <Text
+                style={
+                  styles.subtitle
+                }
+              >
+                Enter your email address and
+                we'll send you a recovery code
+                to reset your password.
+              </Text>
+            </>
+          )}
+
+          {/* Compact heading while keyboard is open */}
+
+          {keyboardVisible && (
+            <Text
+              style={
+                styles.compactTitle
+              }
+            >
+              Reset your password
+            </Text>
+          )}
+
+          {/* Email */}
 
           <TextInput
             style={[
@@ -177,54 +267,85 @@ export default function ForgotPasswordScreen({
                 ? styles.inputError
                 : null,
             ]}
-            placeholder="Enter your email"
-            placeholderTextColor="#777777"
+            placeholder="Email"
+            placeholderTextColor="#6A6F73"
             value={email}
-            onChangeText={handleEmailChange}
+            onChangeText={
+              handleEmailChange
+            }
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             autoComplete="email"
             returnKeyType="done"
             onFocus={scrollFormIntoView}
-            onSubmitEditing={handleRecovery}
+            onSubmitEditing={
+              handleRecovery
+            }
           />
 
+          {/* Error */}
+
           {errorMessage !== '' && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
+            <View
+              style={
+                styles.errorContainer
+              }
+            >
+              <Text
+                style={
+                  styles.errorText
+                }
+              >
                 {errorMessage}
               </Text>
             </View>
           )}
 
+          {/* Reset button */}
+
           <Pressable
             style={[
               styles.button,
-              isSending
-                ? styles.buttonDisabled
-                : null,
+
+              isSending &&
+                styles.buttonDisabled,
             ]}
             onPress={handleRecovery}
             disabled={isSending}
+            accessibilityRole="button"
           >
-            <Text style={styles.buttonText}>
+            <Text
+              style={
+                styles.buttonText
+              }
+            >
               {isSending
                 ? 'Sending...'
-                : 'Send Recovery Code'}
+                : 'Reset Password'}
             </Text>
           </Pressable>
 
+          {/* Back to Login */}
+
           <Pressable
-            style={styles.backToLoginButton}
+            style={
+              styles.backToLoginButton
+            }
             onPress={() =>
-              navigation.navigate('Login')
+              navigation.navigate(
+                'Login'
+              )
             }
             accessibilityRole="button"
             disabled={isSending}
           >
-            <Text style={styles.backToLoginText}>
-              Back to Login
+            <Text
+              style={
+                styles.backToLoginText
+              }
+            >
+              Back to Log In
             </Text>
           </Pressable>
         </ScrollView>
@@ -233,134 +354,138 @@ export default function ForgotPasswordScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0f0f10',
-  },
+const styles =
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+    },
 
-  container: {
-    flex: 1,
-  },
+    container: {
+      flex: 1,
+    },
 
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 120,
-  },
+    content: {
+      flexGrow: 1,
+      paddingHorizontal: 24,
+      paddingTop: 8,
+      paddingBottom: 120,
+    },
 
-  brandContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
+    backButton: {
+      width: 44,
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      marginBottom: 18,
+    },
 
-  logoBox: {
-    width: 38,
-    height: 38,
-    backgroundColor: '#e7c86e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
+    backButtonText: {
+      color: '#1A1A1B',
+      fontSize: 30,
+    },
 
-  logoText: {
-    color: '#111111',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+    logoContainer: {
+      alignItems: 'center',
+      marginBottom: 20,
+    },
 
-  brandName: {
-    color: '#ffffff',
-    fontSize: 26,
-    fontWeight: '600',
-  },
+    logoImage: {
+      width: 54,
+      height: 54,
+      borderRadius: 27,
+      marginBottom: 8,
+    },
 
-  title: {
-    color: '#ffffff',
-    fontSize: 30,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
+    brandName: {
+      color: '#1A1A1B',
+      fontSize: 18,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
 
-  subtitle: {
-    color: '#999999',
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 32,
-  },
+    title: {
+      color: '#1A1A1B',
+      fontSize: 30,
+      lineHeight: 36,
+      fontWeight: '800',
+      textAlign: 'center',
+    },
 
-  label: {
-    color: '#cccccc',
-    fontSize: 14,
-    marginBottom: 8,
-  },
+    subtitle: {
+      color: '#576F76',
+      fontSize: 15,
+      lineHeight: 22,
+      textAlign: 'center',
+      marginTop: 10,
+      marginBottom: 32,
+    },
 
-  input: {
-    backgroundColor: '#19191c',
-    borderWidth: 1,
-    borderColor: '#333333',
-    borderRadius: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    color: '#ffffff',
-    fontSize: 16,
-    marginBottom: 8,
-  },
+    compactTitle: {
+      color: '#1A1A1B',
+      fontSize: 24,
+      fontWeight: '800',
+      marginBottom: 24,
+    },
 
-  inputError: {
-    borderColor: '#d96565',
-  },
+    input: {
+      minHeight: 56,
+      backgroundColor: '#F2F2F2',
+      borderWidth: 0,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      color: '#1A1A1B',
+      fontSize: 16,
+      marginBottom: 12,
+    },
 
-  errorContainer: {
-    backgroundColor: '#2a1717',
-    borderWidth: 1,
-    borderColor: '#8a3d3d',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 6,
-    marginBottom: 4,
-  },
+    inputError: {
+      borderWidth: 1,
+      borderColor: '#D93900',
+    },
 
-  errorText: {
-    color: '#ffb4b4',
-    fontSize: 13,
-    textAlign: 'center',
-  },
+    errorContainer: {
+      backgroundColor: '#FFF3F0',
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 14,
+    },
 
-  button: {
-    backgroundColor: '#e7c86e',
-    paddingVertical: 15,
-    borderRadius: 4,
-    alignItems: 'center',
-    marginTop: 12,
-  },
+    errorText: {
+      color: '#B32D00',
+      fontSize: 13,
+      textAlign: 'center',
+    },
 
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+    button: {
+      minHeight: 54,
+      backgroundColor: '#FF4500',
+      borderRadius: 27,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 6,
+    },
 
-  buttonText: {
-    color: '#111111',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+    buttonDisabled: {
+      opacity: 0.55,
+    },
 
-  backToLoginButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 16,
-  },
+    buttonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '700',
+    },
 
-  backToLoginText: {
-    color: '#e7c86e',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
+    backToLoginButton: {
+      alignItems: 'center',
+      paddingVertical: 12,
+      marginTop: 14,
+    },
+
+    backToLoginText: {
+      color: '#1A1A1B',
+      fontSize: 14,
+      fontWeight: '700',
+    },
+  });

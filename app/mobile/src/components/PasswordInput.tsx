@@ -1,65 +1,77 @@
-import { forwardRef, useState } from 'react';
+import {
+  forwardRef,
+  useState,
+} from 'react';
+
 import {
   Pressable,
   StyleSheet,
-  Text,
   TextInput,
   TextInputProps,
   View,
 } from 'react-native';
 
-type PasswordInputProps = Omit<
-  TextInputProps,
-  'secureTextEntry'
-> & {
+import Ionicons from '@expo/vector-icons/Ionicons';
+
+type Props = TextInputProps & {
   hasError?: boolean;
 };
 
 const PasswordInput = forwardRef<
   TextInput,
-  PasswordInputProps
->(({ hasError = false, ...textInputProps }, ref) => {
-  const [showPassword, setShowPassword] =
-    useState(false);
+  Props
+>(
+  (
+    {
+      hasError = false,
+      style,
+      ...props
+    },
+    ref
+  ) => {
+    const [showPassword, setShowPassword] =
+      useState(false);
 
-  return (
-    <View
-      style={[
-        styles.container,
-        hasError ? styles.errorBorder : null,
-      ]}
-    >
-      <TextInput
-        ref={ref}
-        style={styles.input}
-        placeholderTextColor="#777777"
-        secureTextEntry={!showPassword}
-        autoCapitalize="none"
-        autoCorrect={false}
-        {...textInputProps}
-      />
-
-      <Pressable
-        style={styles.showButton}
-        onPress={() =>
-          setShowPassword(
-            (currentValue) => !currentValue
-          )
-        }
-        accessibilityRole="button"
-        accessibilityLabel={
-          showPassword
-            ? 'Hide password'
-            : 'Show password'
-        }
+    return (
+      <View
+        style={[
+          styles.container,
+          hasError && styles.inputError,
+        ]}
       >
-        <Text style={styles.showButtonText}>
-          {showPassword ? 'Hide' : 'Show'}
-        </Text>
-      </Pressable>
-    </View>
-  );
-});
+        <TextInput
+          ref={ref}
+          {...props}
+          style={[styles.input, style]}
+          placeholderTextColor="#6A6F73"
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+
+        <Pressable
+          style={styles.eyeButton}
+          onPress={() =>
+            setShowPassword(
+              (current) => !current
+            )
+          }
+          accessibilityRole="button"
+        >
+          <Ionicons
+            name={
+              showPassword
+                ? 'eye-off-outline'
+                : 'eye-outline'
+            }
+            size={21}
+            color="#555555"
+          />
+        </Pressable>
+      </View>
+    );
+  }
+);
 
 PasswordInput.displayName = 'PasswordInput';
 
@@ -67,35 +79,32 @@ export default PasswordInput;
 
 const styles = StyleSheet.create({
   container: {
+    minHeight: 56,
+    backgroundColor: '#F2F2F2',
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#19191c',
-    borderWidth: 1,
-    borderColor: '#333333',
-    borderRadius: 6,
-    marginBottom: 8,
+    marginBottom: 12,
   },
 
   input: {
     flex: 1,
-    color: '#ffffff',
+    minHeight: 56,
+    paddingHorizontal: 16,
+    paddingRight: 4,
+    color: '#1A1A1B',
     fontSize: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
   },
 
-  showButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+  eyeButton: {
+    width: 52,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  showButtonText: {
-    color: '#e7c86e',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-
-  errorBorder: {
-    borderColor: '#d96565',
+  inputError: {
+    borderWidth: 1,
+    borderColor: '#D93900',
   },
 });

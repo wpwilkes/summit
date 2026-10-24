@@ -1,5 +1,12 @@
-import { useRef, useState } from 'react';
 import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
+import {
+  Alert,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -10,11 +17,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import PasswordInput from '../components/PasswordInput';
 import { RootStackParamList } from '../types/navigation.types';
+
 import {
   LoginFormErrors,
   hasLoginErrors,
@@ -44,21 +54,65 @@ export default function LoginScreen({
   const [isLoggingIn, setIsLoggingIn] =
     useState(false);
 
+  const [keyboardVisible, setKeyboardVisible] =
+    useState(false);
+
   const passwordRef = useRef<TextInput>(null);
+
+  const scrollViewRef =
+    useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const showSubscription =
+      Keyboard.addListener(
+        'keyboardDidShow',
+        () => {
+          setKeyboardVisible(true);
+        }
+      );
+
+    const hideSubscription =
+      Keyboard.addListener(
+        'keyboardDidHide',
+        () => {
+          setKeyboardVisible(false);
+
+          scrollViewRef.current?.scrollTo({
+            y: 0,
+            animated: true,
+          });
+        }
+      );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const handleGoogleLogin = () => {
+    Alert.alert(
+      'Google Sign-In',
+      'Google sign-in is coming soon.'
+    );
+  };
 
   const handleLogin = async () => {
     Keyboard.dismiss();
 
     setErrorMessage('');
 
-    const validationErrors = validateLoginForm({
-      email,
-      password,
-    });
+    const validationErrors =
+      validateLoginForm({
+        email,
+        password,
+      });
 
     setErrors(validationErrors);
 
-    if (hasLoginErrors(validationErrors)) {
+    if (
+      hasLoginErrors(validationErrors)
+    ) {
       return;
     }
 
@@ -67,15 +121,6 @@ export default function LoginScreen({
     setIsLoggingIn(true);
 
     try {
-      /*
-       * MOCK AUTHENTICATION CALL
-       *
-       * For now, loginUser() returns a mock
-       * authentication response.
-       *
-       * Later, authService.ts will send the same
-       * email and password to Wesley's backend.
-       */
       const response = await loginUser({
         email: trimmedEmail,
         password,
@@ -86,10 +131,6 @@ export default function LoginScreen({
         return;
       }
 
-      /*
-       * A successful login must return an
-       * authentication token.
-       */
       if (!response.token) {
         setErrorMessage(
           'Login succeeded, but no authentication token was returned.'
@@ -97,21 +138,10 @@ export default function LoginScreen({
         return;
       }
 
-      /*
-       * Store the authentication token securely.
-       *
-       * Right now this stores the mock token.
-       * Later it will store the real backend token.
-       */
-      await saveAuthToken(response.token);
+      await saveAuthToken(
+        response.token
+      );
 
-      /*
-       * Move into the authenticated part of
-       * the app.
-       *
-       * Reset the navigation stack so the user
-       * cannot press Back and return to Login.
-       */
       navigation.reset({
         index: 0,
         routes: [
@@ -129,14 +159,18 @@ export default function LoginScreen({
     }
   };
 
-  const handleEmailChange = (value: string) => {
+  const handleEmailChange = (
+    value: string
+  ) => {
     setEmail(value);
 
     if (errors.email) {
-      setErrors((currentErrors) => ({
-        ...currentErrors,
-        email: undefined,
-      }));
+      setErrors(
+        (currentErrors) => ({
+          ...currentErrors,
+          email: undefined,
+        })
+      );
     }
 
     if (errorMessage) {
@@ -144,19 +178,41 @@ export default function LoginScreen({
     }
   };
 
-  const handlePasswordChange = (value: string) => {
+  const handlePasswordChange = (
+    value: string
+  ) => {
     setPassword(value);
 
     if (errors.password) {
-      setErrors((currentErrors) => ({
-        ...currentErrors,
-        password: undefined,
-      }));
+      setErrors(
+        (currentErrors) => ({
+          ...currentErrors,
+          password: undefined,
+        })
+      );
     }
 
     if (errorMessage) {
       setErrorMessage('');
     }
+  };
+
+  const scrollToEmail = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: 120,
+        animated: true,
+      });
+    }, 200);
+  };
+
+  const scrollToPassword = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: 240,
+        animated: true,
+      });
+    }, 200);
   };
 
   return (
@@ -164,49 +220,160 @@ export default function LoginScreen({
       style={styles.safeArea}
       edges={['top', 'bottom']}
     >
+      <StatusBar style="dark" />
+
       <KeyboardAvoidingView
         style={styles.container}
         behavior={
           Platform.OS === 'ios'
             ? 'padding'
-            : 'height'
+            : undefined
         }
       >
         <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={
-            Platform.OS === 'ios'
-              ? 'interactive'
-              : 'on-drag'
+          ref={scrollViewRef}
+          contentContainerStyle={
+            styles.content
           }
-          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={
+            false
+          }
         >
-          {/* Summit Brand */}
+          {/* Back button */}
 
-          <View style={styles.brandContainer}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
-
-            <Text style={styles.brandName}>
-              Summit
+          <Pressable
+            style={styles.backButton}
+            onPress={() =>
+              navigation.goBack()
+            }
+            accessibilityRole="button"
+          >
+            <Text
+              style={
+                styles.backButtonText
+              }
+            >
+              ←
             </Text>
-          </View>
+          </Pressable>
 
-          <Text style={styles.title}>
-            Welcome Back
-          </Text>
+          {/* Full header when keyboard is closed */}
 
-          <Text style={styles.subtitle}>
-            Log in to continue the discussion.
-          </Text>
+          {!keyboardVisible && (
+            <>
+              <View
+                style={
+                  styles.logoContainer
+                }
+              >
+                <Image
+                  source={require('../assets/reddit-icon-1.jpg')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
 
-          {/* Email */}
+                <Text
+                  style={
+                    styles.brandName
+                  }
+                >
+                  SUMMIT
+                </Text>
+              </View>
 
-          <Text style={styles.label}>
-            Email
-          </Text>
+              <Text
+                style={styles.title}
+              >
+                Log in to Summit
+              </Text>
+
+              <Text
+                style={
+                  styles.subtitle
+                }
+              >
+                Welcome back. Continue
+                the conversation.
+              </Text>
+
+              {/* Google */}
+
+              <Pressable
+                style={
+                  styles.googleButton
+                }
+                onPress={
+                  handleGoogleLogin
+                }
+                accessibilityRole="button"
+              >
+                <View
+                  style={
+                    styles.googleIcon
+                  }
+                >
+                  <Text
+                    style={
+                      styles.googleIconText
+                    }
+                  >
+                    G
+                  </Text>
+                </View>
+
+                <Text
+                  style={
+                    styles.googleButtonText
+                  }
+                >
+                  Continue with Google
+                </Text>
+              </Pressable>
+
+              {/* Divider */}
+
+              <View
+                style={
+                  styles.dividerContainer
+                }
+              >
+                <View
+                  style={
+                    styles.dividerLine
+                  }
+                />
+
+                <Text
+                  style={
+                    styles.dividerText
+                  }
+                >
+                  OR
+                </Text>
+
+                <View
+                  style={
+                    styles.dividerLine
+                  }
+                />
+              </View>
+            </>
+          )}
+
+          {/* Compact heading while keyboard is open */}
+
+          {keyboardVisible && (
+            <Text
+              style={
+                styles.compactTitle
+              }
+            >
+              Log in to Summit
+            </Text>
+          )}
+
+          {/* Email or Username */}
 
           <TextInput
             style={[
@@ -215,45 +382,56 @@ export default function LoginScreen({
                 ? styles.inputError
                 : null,
             ]}
-            placeholder="Enter your email"
-            placeholderTextColor="#777777"
+            placeholder="Email or Username"
+            placeholderTextColor="#6A6F73"
             value={email}
-            onChangeText={handleEmailChange}
-            keyboardType="email-address"
+            onChangeText={
+              handleEmailChange
+            }
+            keyboardType="default"
             autoCapitalize="none"
             autoCorrect={false}
-            autoComplete="email"
             returnKeyType="next"
-            onSubmitEditing={() =>
-              passwordRef.current?.focus()
-            }
+            blurOnSubmit={false}
+            onFocus={scrollToEmail}
+            onSubmitEditing={() => {
+              passwordRef.current?.focus();
+              scrollToPassword();
+            }}
           />
 
           {errors.email && (
-            <Text style={styles.errorText}>
+            <Text
+              style={styles.errorText}
+            >
               {errors.email}
             </Text>
           )}
 
           {/* Password */}
 
-          <Text style={styles.label}>
-            Password
-          </Text>
-
           <PasswordInput
             ref={passwordRef}
-            hasError={Boolean(errors.password)}
-            placeholder="Enter your password"
+            hasError={Boolean(
+              errors.password
+            )}
+            placeholder="Password"
             value={password}
-            onChangeText={handlePasswordChange}
+            onChangeText={
+              handlePasswordChange
+            }
             autoComplete="current-password"
             returnKeyType="done"
-            onSubmitEditing={handleLogin}
+            onFocus={scrollToPassword}
+            onSubmitEditing={
+              handleLogin
+            }
           />
 
           {errors.password && (
-            <Text style={styles.errorText}>
+            <Text
+              style={styles.errorText}
+            >
               {errors.password}
             </Text>
           )}
@@ -261,13 +439,21 @@ export default function LoginScreen({
           {/* Forgot Password */}
 
           <Pressable
-            style={styles.forgotPasswordButton}
+            style={
+              styles.forgotPasswordButton
+            }
             onPress={() =>
-              navigation.navigate('ForgotPassword')
+              navigation.navigate(
+                'ForgotPassword'
+              )
             }
             accessibilityRole="button"
           >
-            <Text style={styles.forgotPasswordText}>
+            <Text
+              style={
+                styles.forgotPasswordText
+              }
+            >
               Forgot password?
             </Text>
           </Pressable>
@@ -275,38 +461,56 @@ export default function LoginScreen({
           {/* Login Error */}
 
           {errorMessage !== '' && (
-            <View style={styles.resultErrorContainer}>
-              <Text style={styles.resultErrorText}>
+            <View
+              style={
+                styles.resultErrorContainer
+              }
+            >
+              <Text
+                style={
+                  styles.resultErrorText
+                }
+              >
                 {errorMessage}
               </Text>
             </View>
           )}
 
-          {/* Login */}
+          {/* Login Button */}
 
           <Pressable
             style={[
-              styles.button,
-              isLoggingIn
-                ? styles.buttonDisabled
-                : null,
+              styles.loginButton,
+              isLoggingIn &&
+                styles.buttonDisabled,
             ]}
             onPress={handleLogin}
             disabled={isLoggingIn}
+            accessibilityRole="button"
           >
-            <Text style={styles.buttonText}>
+            <Text
+              style={
+                styles.loginButtonText
+              }
+            >
               {isLoggingIn
                 ? 'Logging In...'
                 : 'Log In'}
             </Text>
           </Pressable>
 
-          <Text style={styles.signupText}>
-            Don't have an account?{' '}
+          {/* Signup */}
+
+          <Text
+            style={styles.signupText}
+          >
+            New to Summit?{' '}
             <Text
               style={styles.signupLink}
               onPress={() =>
-                navigation.navigate('Signup')
+                navigation.navigate(
+                  'Signup'
+                )
               }
             >
               Sign up
@@ -318,151 +522,204 @@ export default function LoginScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0f0f10',
-  },
+const styles =
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: '#ffffff',
+    },
 
-  container: {
-    flex: 1,
-  },
+    container: {
+      flex: 1,
+    },
 
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
+    content: {
+      flexGrow: 1,
+      paddingHorizontal: 24,
+      paddingTop: 8,
+      paddingBottom: 180,
+    },
 
-  brandContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
+    backButton: {
+      width: 44,
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      marginBottom: 8,
+    },
 
-  logoBox: {
-    width: 38,
-    height: 38,
-    backgroundColor: '#e7c86e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
+    backButtonText: {
+      color: '#1A1A1B',
+      fontSize: 30,
+    },
 
-  logoText: {
-    color: '#111111',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+    logoContainer: {
+      alignItems: 'center',
+      marginBottom: 18,
+    },
 
-  brandName: {
-    color: '#ffffff',
-    fontSize: 26,
-    fontWeight: '600',
-  },
+    logoImage: {
+      width: 54,
+      height: 54,
+      borderRadius: 27,
+      marginBottom: 8,
+    },
 
-  title: {
-    color: '#ffffff',
-    fontSize: 30,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
+    brandName: {
+      color: '#1A1A1B',
+      fontSize: 18,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
 
-  subtitle: {
-    color: '#999999',
-    fontSize: 15,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 32,
-  },
+    title: {
+      color: '#1A1A1B',
+      fontSize: 30,
+      fontWeight: '800',
+      textAlign: 'center',
+    },
 
-  label: {
-    color: '#cccccc',
-    fontSize: 14,
-    marginBottom: 8,
-  },
+    subtitle: {
+      color: '#576F76',
+      fontSize: 14,
+      textAlign: 'center',
+      marginTop: 8,
+      marginBottom: 26,
+    },
 
-  input: {
-    backgroundColor: '#19191c',
-    borderWidth: 1,
-    borderColor: '#333333',
-    borderRadius: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    color: '#ffffff',
-    fontSize: 16,
-    marginBottom: 8,
-  },
+    compactTitle: {
+      color: '#1A1A1B',
+      fontSize: 24,
+      fontWeight: '800',
+      marginBottom: 22,
+    },
 
-  inputError: {
-    borderColor: '#d96565',
-  },
+    googleButton: {
+      height: 54,
+      borderWidth: 1,
+      borderColor: '#D6D9DC',
+      borderRadius: 27,
+      backgroundColor: '#FFFFFF',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  errorText: {
-    color: '#ff9f9f',
-    fontSize: 13,
-    marginBottom: 14,
-  },
+    googleIcon: {
+      position: 'absolute',
+      left: 20,
+    },
 
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 8,
-    paddingLeft: 12,
-    marginBottom: 8,
-  },
+    googleIconText: {
+      color: '#4285F4',
+      fontSize: 18,
+      fontWeight: '700',
+    },
 
-  forgotPasswordText: {
-    color: '#e7c86e',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+    googleButtonText: {
+      color: '#1A1A1B',
+      fontSize: 15,
+      fontWeight: '600',
+    },
 
-  resultErrorContainer: {
-    backgroundColor: '#2a1717',
-    borderWidth: 1,
-    borderColor: '#8a3d3d',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-  },
+    dividerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 24,
+    },
 
-  resultErrorText: {
-    color: '#ffb4b4',
-    fontSize: 13,
-    textAlign: 'center',
-  },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: '#EDEFF1',
+    },
 
-  button: {
-    backgroundColor: '#e7c86e',
-    paddingVertical: 15,
-    borderRadius: 4,
-    alignItems: 'center',
-    marginTop: 4,
-  },
+    dividerText: {
+      color: '#878A8C',
+      fontSize: 12,
+      fontWeight: '600',
+      marginHorizontal: 14,
+    },
 
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+    input: {
+      minHeight: 56,
+      backgroundColor: '#F2F2F2',
+      borderWidth: 0,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      color: '#1A1A1B',
+      fontSize: 16,
+      marginBottom: 12,
+    },
 
-  buttonText: {
-    color: '#111111',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+    inputError: {
+      borderWidth: 1,
+      borderColor: '#D93900',
+    },
 
-  signupText: {
-    color: '#888888',
-    textAlign: 'center',
-    marginTop: 24,
-    marginBottom: 10,
-    fontSize: 14,
-  },
+    errorText: {
+      color: '#D93900',
+      fontSize: 13,
+      marginBottom: 14,
+    },
 
-  signupLink: {
-    color: '#e7c86e',
-    fontWeight: '600',
-  },
-});
+    forgotPasswordButton: {
+      alignSelf: 'flex-start',
+      borderWidth: 1,
+      borderColor: '#D6D9DC',
+      borderRadius: 18,
+      paddingHorizontal: 13,
+      paddingVertical: 8,
+      marginTop: 2,
+      marginBottom: 18,
+    },
+
+    forgotPasswordText: {
+      color: '#1A1A1B',
+      fontSize: 13,
+      fontWeight: '600',
+    },
+
+    resultErrorContainer: {
+      backgroundColor: '#FFF3F0',
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 14,
+    },
+
+    resultErrorText: {
+      color: '#B32D00',
+      fontSize: 13,
+      textAlign: 'center',
+    },
+
+    loginButton: {
+      minHeight: 54,
+      borderRadius: 27,
+      backgroundColor: '#FF4500',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    loginButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '700',
+    },
+
+    buttonDisabled: {
+      opacity: 0.55,
+    },
+
+    signupText: {
+      color: '#1A1A1B',
+      textAlign: 'center',
+      marginTop: 22,
+      fontSize: 14,
+    },
+
+    signupLink: {
+      color: '#1A1A1B',
+      fontWeight: '800',
+    },
+  });
