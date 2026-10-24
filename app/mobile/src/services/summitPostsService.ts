@@ -1,48 +1,66 @@
 import type {
   PostInput,
+  PostPhoto,
   SummitComment,
   SummitPost,
 } from '../types/summitPost.types';
 
-export const POST_CATEGORIES = [
-  'Politics',
-  'Health',
-  'Technology',
-  'Sports',
-  'Education',
-  'Entertainment',
+export const POST_COMMUNITIES = [
+  'politics',
+  'health',
+  'technology',
+  'sport',
+  'education',
+  'entertainment',
 ] as const;
 
-export function validatePost(input: PostInput): PostInput {
-  const title = typeof input.title === 'string' ? input.title.trim() : '';
-  const description =
-    typeof input.description === 'string' ? input.description.trim() : '';
-
-  if (!title) throw new Error('Title is required.');
-  if (title.length > 160) {
-    throw new Error('Title must be 160 characters or fewer.');
+function validatePhoto(photo?: PostPhoto): PostPhoto | undefined {
+  if (!photo) return undefined;
+  if (
+    typeof photo.uri !== 'string' ||
+    !/^(file:|content:|ph:|https?:|blob:|data:image\/)/i.test(photo.uri) ||
+    !Number.isFinite(photo.width) ||
+    !Number.isFinite(photo.height) ||
+    photo.width <= 0 ||
+    photo.height <= 0 ||
+    (photo.mimeType && !photo.mimeType.startsWith('image/'))
+  ) {
+    throw new Error('Choose a valid photo. Only images are supported.');
   }
-  if (!description) throw new Error('Post content is required.');
-  if (description.length > 10000) {
+  return { ...photo };
+}
+
+export function validatePost(input: PostInput): PostInput {
+  const body = typeof input.body === 'string' ? input.body.trim() : '';
+  const photo = validatePhoto(input.photo);
+  if (!body && !photo) throw new Error('Write a message or add a photo.');
+  if (body.length > 10000) {
     throw new Error('Post content must be 10000 characters or fewer.');
   }
-  if (!POST_CATEGORIES.some((category) => category === input.category)) {
-    throw new Error('A valid category is required.');
+  if (!POST_COMMUNITIES.some((item) => item === input.community)) {
+    throw new Error('Select a valid community.');
   }
-  if (typeof input.anonymous !== 'boolean') {
-    throw new Error('Anonymous must be true or false.');
+  return { body, community: input.community, photo };
+}
+
+function validateComment(body: string): string {
+  const text = typeof body === 'string' ? body.trim() : '';
+  if (!text) throw new Error('Comment is required.');
+  if (text.length > 2000) {
+    throw new Error('Comment must be 2000 characters or fewer.');
   }
-  return { title, description, category: input.category, anonymous: input.anonymous };
+  return text;
 }
 
 /**
- * Native equivalent of the existing browser demo, not a backend API.
- * Create one instance per mounted signed-in screen. It is deliberately not
- * persisted or shared between sessions. No passwords or tokens enter this store.
+ * Existing local-only storage: one instance per signed-in Posts screen.
+ * Photos are device URIs, not uploaded files. Everything resets on reload/logout.
+ * There are no post/comment backend requests or authentication changes here.
  */
 export function createSummitPostsService(author = 'You') {
   const posts = new Map<string, SummitPost>();
   const comments = new Map<string, SummitComment[]>();
+  const username = author.trim().replace(/^u\//i, '') || 'You';
   let nextId = 0;
   const createId = () => `local-${Date.now()}-${++nextId}`;
 
@@ -52,21 +70,34 @@ export function createSummitPostsService(author = 'You') {
     return post;
   };
 
+  const findComment = (postId: string, id: string): SummitComment => {
+    find(postId);
+    const comment = comments.get(postId)?.find((item) => item.id === id);
+    if (!comment) throw new Error('Comment not found.');
+    return comment;
+  };
+
+  const requireOwner = (item: { isOwner: boolean }) => {
+    if (!item.isOwner)
+      throw new Error('You can only edit or delete your own content.');
+  };
+
   const present = (post: SummitPost): SummitPost => ({
     ...post,
-    author: post.anonymous ? 'Anonymous' : author,
+    photo: post.photo ? { ...post.photo } : undefined,
     commentCount: comments.get(post.id)?.length ?? 0,
   });
 
+  const applyVote = (item: SummitPost | SummitComment, value: -1 | 1) => {
+    if (value !== 1 && value !== -1) throw new Error('Vote must be 1 or -1.');
+    const nextVote = item.userVote === value ? 0 : value;
+    item.voteCount += nextVote - item.userVote;
+    item.userVote = nextVote;
+  };
+
   return {
-    list(category = ''): SummitPost[] {
-      if (category && !POST_CATEGORIES.some((item) => item === category)) {
-        throw new Error('A valid category is required.');
-      }
-      return [...posts.values()]
-        .reverse()
-        .filter((post) => !category || post.category === category)
-        .map(present);
+    list(): SummitPost[] {
+      return [...posts.values()].reverse().map(present);
     },
     get(id: string): SummitPost {
       return present(find(id));
@@ -79,7 +110,7 @@ export function createSummitPostsService(author = 'You') {
         id: createId(),
         createdAt: timestamp,
         updatedAt: timestamp,
-        author,
+        author: username,
         isOwner: true,
         voteCount: 0,
         userVote: 0,
@@ -90,20 +121,20 @@ export function createSummitPostsService(author = 'You') {
     },
     update(id: string, input: PostInput): SummitPost {
       const post = find(id);
-      Object.assign(post, validatePost(input), { updatedAt: new Date().toISOString() });
+      requireOwner(post);
+      Object.assign(post, validatePost(input), {
+        updatedAt: new Date().toISOString(),
+      });
       return present(post);
     },
     remove(id: string): void {
-      find(id);
+      requireOwner(find(id));
       posts.delete(id);
       comments.delete(id);
     },
     vote(id: string, value: -1 | 1): SummitPost {
       const post = find(id);
-      if (value !== 1 && value !== -1) throw new Error('Vote must be 1 or -1.');
-      const nextVote = post.userVote === value ? 0 : value;
-      post.voteCount += nextVote - post.userVote;
-      post.userVote = nextVote;
+      applyVote(post, value);
       return present(post);
     },
     comments(id: string): SummitComment[] {
@@ -112,19 +143,40 @@ export function createSummitPostsService(author = 'You') {
     },
     comment(id: string, body: string): SummitComment {
       find(id);
-      const text = typeof body === 'string' ? body.trim() : '';
-      if (!text) throw new Error('Comment is required.');
-      if (text.length > 2000) {
-        throw new Error('Comment must be 2000 characters or fewer.');
-      }
+      const text = validateComment(body);
+      const timestamp = new Date().toISOString();
       const comment: SummitComment = {
         id: createId(),
         postId: id,
         body: text,
-        author,
-        createdAt: new Date().toISOString(),
+        author: username,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        isOwner: true,
+        voteCount: 0,
+        userVote: 0,
       };
       comments.set(id, [...(comments.get(id) ?? []), comment]);
+      return { ...comment };
+    },
+    updateComment(postId: string, id: string, body: string): SummitComment {
+      const comment = findComment(postId, id);
+      requireOwner(comment);
+      const text = validateComment(body);
+      comment.body = text;
+      comment.updatedAt = new Date().toISOString();
+      return { ...comment };
+    },
+    removeComment(postId: string, id: string): void {
+      requireOwner(findComment(postId, id));
+      comments.set(
+        postId,
+        (comments.get(postId) ?? []).filter((item) => item.id !== id),
+      );
+    },
+    voteComment(postId: string, id: string, value: -1 | 1): SummitComment {
+      const comment = findComment(postId, id);
+      applyVote(comment, value);
       return { ...comment };
     },
   };

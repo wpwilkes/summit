@@ -1,55 +1,65 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  background: '#0f0f10',
-  surface: '#18181b',
-  border: '#333337',
-  text: '#ffffff',
-  muted: '#b0b0b8',
-  accent: '#e7c86e',
-  accentSurface: '#29251a',
-  onAccent: '#111111',
-  error: '#ffb4ab',
+  background: '#ffffff',
+  surface: '#ffffff',
+  soft: '#f4f5f6',
+  border: '#e2e4e5',
+  text: '#0f1416',
+  muted: '#5c696e',
+  accent: '#ff4500',
+  onAccent: '#ffffff',
+  downvote: '#6a5cff',
+  error: '#b3261e',
 };
 
 export const ui = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 16,
+  flex: { flex: 1 },
+  page: { flex: 1, backgroundColor: colors.background },
+  constrained: { width: '100%', maxWidth: 900, alignSelf: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  between: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
   },
-  row: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
-  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  title: { color: colors.text, fontSize: 20, fontWeight: '700', flexShrink: 1 },
-  label: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  body: { color: colors.text, fontSize: 15, lineHeight: 23 },
+  title: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  label: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  body: { color: colors.text, fontSize: 17, lineHeight: 24 },
   muted: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   error: { color: colors.error, fontSize: 14, lineHeight: 21 },
-  input: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 6,
-    color: colors.text,
-    fontSize: 15,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 48,
+  iconButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
   },
   button: {
     minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
     backgroundColor: colors.accent,
-    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: { color: colors.onAccent, fontSize: 14, fontWeight: '700' },
-  secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  secondaryText: { color: colors.accent, fontSize: 14, fontWeight: '600' },
-  disabled: { opacity: 0.5 },
+  buttonText: { color: colors.onAccent, fontSize: 15, fontWeight: '700' },
+  disabled: { opacity: 0.4 },
+  separator: { height: 1, backgroundColor: colors.border },
 });
+
+export function relativeTime(timestamp: string): string {
+  const minutes = Math.max(
+    0,
+    Math.floor((Date.now() - Date.parse(timestamp)) / 60000),
+  );
+  if (!Number.isFinite(minutes) || minutes < 1) return 'now';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours}h` : `${Math.floor(hours / 24)}d`;
+}
+
+export function formatCount(value: number): string {
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
