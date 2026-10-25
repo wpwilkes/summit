@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+
 import {
   ActivityIndicator,
   StyleSheet,
   View,
 } from 'react-native';
+
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -125,14 +127,7 @@ export default function App() {
             name="Signup"
             component={SignupScreen}
             options={{
-              headerShown: true,
-              headerTitle: '',
-              headerStyle: {
-                backgroundColor: '#0f0f10',
-              },
-              headerTintColor: '#e7c86e',
-              headerShadowVisible: false,
-              headerBackButtonDisplayMode: 'minimal',
+              headerShown: false,
             }}
           />
 
@@ -140,14 +135,7 @@ export default function App() {
             name="EmailVerification"
             component={EmailVerificationScreen}
             options={{
-              headerShown: true,
-              headerTitle: '',
-              headerStyle: {
-                backgroundColor: '#0f0f10',
-              },
-              headerTintColor: '#e7c86e',
-              headerShadowVisible: false,
-              headerBackButtonDisplayMode: 'minimal',
+              headerShown: false,
             }}
           />
 
@@ -155,14 +143,7 @@ export default function App() {
             name="ForgotPassword"
             component={ForgotPasswordScreen}
             options={{
-              headerShown: true,
-              headerTitle: '',
-              headerStyle: {
-                backgroundColor: '#0f0f10',
-              },
-              headerTintColor: '#e7c86e',
-              headerShadowVisible: false,
-              headerBackButtonDisplayMode: 'minimal',
+              headerShown: false,
             }}
           />
 
@@ -170,14 +151,7 @@ export default function App() {
             name="ResetPassword"
             component={ResetPasswordScreen}
             options={{
-              headerShown: true,
-              headerTitle: '',
-              headerStyle: {
-                backgroundColor: '#0f0f10',
-              },
-              headerTintColor: '#e7c86e',
-              headerShadowVisible: false,
-              headerBackButtonDisplayMode: 'minimal',
+              headerShown: false,
             }}
           />
 

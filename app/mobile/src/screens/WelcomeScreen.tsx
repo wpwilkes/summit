@@ -1,9 +1,13 @@
 import {
+  Image,
+  ImageBackground,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -18,196 +22,174 @@ export default function WelcomeScreen({
   navigation,
 }: Props) {
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Summit Brand */}
+    <ImageBackground
+      source={require('../assets/summit-welcome.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <StatusBar style="dark" />
 
-        <View style={styles.brandContainer}>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoText}>S</Text>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Summit branding */}
+
+        <View style={styles.topContainer}>
+          <View style={styles.brandContainer}>
+            <Image
+              source={require('../assets/reddit-icon-1.jpg')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+
+            <Text style={styles.brandName}>
+              SUMMIT
+            </Text>
           </View>
 
-          <Text style={styles.brandName}>
-            Summit
-          </Text>
-        </View>
+          {/* Main welcome message */}
 
-        {/* Welcome Message */}
-
-        <View style={styles.messageContainer}>
           <Text style={styles.title}>
-            Find the discussion that matters.
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Explore posts, join conversations, and
-            understand long discussions faster with
-            AI-generated reply summaries.
+            The most real place{'\n'}
+            on the internet
           </Text>
         </View>
 
-        {/* Entry Options */}
+        {/* Bottom buttons */}
 
         <View style={styles.buttonContainer}>
           <Pressable
-            style={styles.primaryButton}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.pressedButton,
+            ]}
             onPress={() =>
               navigation.navigate('Signup')
             }
             accessibilityRole="button"
           >
             <Text style={styles.primaryButtonText}>
-              Create Account
+              Get Started
             </Text>
           </Pressable>
 
           <Pressable
-            style={styles.secondaryButton}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed && styles.pressedButton,
+            ]}
             onPress={() =>
               navigation.navigate('Login')
             }
             accessibilityRole="button"
           >
             <Text style={styles.secondaryButtonText}>
-              Log In
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.browseButton}
-            onPress={() =>
-              navigation.navigate('PublicFeed')
-            }
-            accessibilityRole="button"
-          >
-            <Text style={styles.browseButtonText}>
-              Browse Summit
-            </Text>
-
-            <Text style={styles.browseDescription}>
-              Continue without an account
+              I already have an account
             </Text>
           </Pressable>
         </View>
-
-        <Text style={styles.footerText}>
-          Summit — discussions made easier to follow.
-        </Text>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  background: {
     flex: 1,
-    backgroundColor: '#0f0f10',
+    width: '100%',
+    height: '100%',
   },
 
-  container: {
+  safeArea: {
     flex: 1,
+    justifyContent: 'space-between',
+  },
+
+  topContainer: {
+    alignItems: 'center',
+    paddingTop: 24,
     paddingHorizontal: 24,
-    paddingVertical: 32,
   },
 
   brandContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 26,
   },
 
-  logoBox: {
+  logoImage: {
     width: 42,
     height: 42,
-    backgroundColor: '#e7c86e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-
-  logoText: {
-    color: '#111111',
-    fontSize: 22,
-    fontWeight: 'bold',
+    borderRadius: 21,
+    marginRight: 9,
   },
 
   brandName: {
-    color: '#ffffff',
-    fontSize: 27,
-    fontWeight: '600',
-  },
-
-  messageContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    color: '#1a1a1b',
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 
   title: {
-    color: '#ffffff',
+    color: '#1a1a1b',
     fontSize: 34,
-    lineHeight: 42,
-    fontWeight: 'bold',
-    marginBottom: 18,
-  },
-
-  subtitle: {
-    color: '#999999',
-    fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 40,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 
   buttonContainer: {
-    marginBottom: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 18,
   },
 
   primaryButton: {
-    backgroundColor: '#e7c86e',
-    paddingVertical: 16,
-    borderRadius: 4,
+    minHeight: 56,
+    borderRadius: 28,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 4,
   },
 
   primaryButtonText: {
-    color: '#111111',
-    fontSize: 16,
+    color: '#1a1a1b',
+    fontSize: 17,
     fontWeight: '700',
   },
 
   secondaryButton: {
-    borderWidth: 1,
-    borderColor: '#e7c86e',
-    paddingVertical: 16,
-    borderRadius: 4,
+    minHeight: 56,
+    borderRadius: 28,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   secondaryButtonText: {
-    color: '#e7c86e',
+    color: '#1a1a1b',
     fontSize: 16,
     fontWeight: '700',
   },
 
-  browseButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-
-  browseButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
-  browseDescription: {
-    color: '#777777',
-    fontSize: 12,
-    marginTop: 4,
-  },
-
-  footerText: {
-    color: '#666666',
-    fontSize: 12,
-    textAlign: 'center',
+  pressedButton: {
+    opacity: 0.8,
   },
 });
