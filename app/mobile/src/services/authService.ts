@@ -1,4 +1,8 @@
 import {
+  AUTH_CONTRACTS,
+} from '@summit/shared';
+
+import {
   AuthResponse,
   ForgotPasswordRequest,
   LoginRequest,
@@ -12,7 +16,8 @@ import {
 /*
  * AUTHENTICATION SERVICE
  *
- * Register and Login use the real backend.
+ * Register and Login use the real backend
+ * and the shared API contracts.
  *
  * Email verification, resend verification,
  * forgot password, and reset password are still
@@ -29,16 +34,6 @@ const wait = (milliseconds: number) =>
     setTimeout(resolve, milliseconds);
   });
 
-type BackendAuthResponse = {
-  user: {
-    id: number;
-    email: string;
-    username: string;
-    createdAt: string;
-  };
-  token: string;
-};
-
 type BackendErrorObject = {
   code?: string;
   message?: string;
@@ -51,17 +46,6 @@ type BackendErrorResponse = {
 
 /*
  * Return a readable error message from the backend.
- *
- * The backend may return either:
- *
- * error: "Some error"
- *
- * or:
- *
- * error: {
- *   code: "...",
- *   message: "Some error"
- * }
  */
 function getBackendErrorMessage(
   errorData: BackendErrorResponse,
@@ -98,29 +82,30 @@ function getApiBaseUrl(): string {
 
 /*
  * REAL REGISTRATION
+ *
+ * Path, method, request type, and response schema
+ * come from @summit/shared.
  */
 export async function registerUser(
   data: SignupRequest
 ): Promise<AuthResponse> {
   try {
     const response = await fetch(
-      `${getApiBaseUrl()}/api/auth/register`,
+      `${getApiBaseUrl()}${AUTH_CONTRACTS.register.path}`,
       {
-        method: 'POST',
+        method:
+          AUTH_CONTRACTS.register.method,
+
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email: data.email,
-          username: data.username,
-          password: data.password,
-        }),
+
+        body: JSON.stringify(data),
       }
     );
 
-    const responseData = (await response.json()) as
-      | BackendAuthResponse
-      | BackendErrorResponse;
+    const responseData =
+      await response.json();
 
     if (!response.ok) {
       const errorData =
@@ -135,14 +120,25 @@ export async function registerUser(
       };
     }
 
-    const registerData =
-      responseData as BackendAuthResponse;
+    /*
+     * Validate the successful backend response
+     * using the shared response schema.
+     */
+    const parsedResponse =
+      AUTH_CONTRACTS.register.responseBody.safeParse(
+        responseData
+      );
 
-    if (!registerData.user) {
+    if (!parsedResponse.success) {
+      console.error(
+        'Invalid registration response:',
+        parsedResponse.error
+      );
+
       return {
         success: false,
         message:
-          'Registration failed. User information was not returned.',
+          'Registration failed. Invalid response from the server.',
       };
     }
 
@@ -167,28 +163,30 @@ export async function registerUser(
 
 /*
  * REAL LOGIN
+ *
+ * Path, method, request type, and response schema
+ * come from @summit/shared.
  */
 export async function loginUser(
   data: LoginRequest
 ): Promise<LoginResponse> {
   try {
     const response = await fetch(
-      `${getApiBaseUrl()}/api/auth/login`,
+      `${getApiBaseUrl()}${AUTH_CONTRACTS.login.path}`,
       {
-        method: 'POST',
+        method:
+          AUTH_CONTRACTS.login.method,
+
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-        }),
+
+        body: JSON.stringify(data),
       }
     );
 
-    const responseData = (await response.json()) as
-      | BackendAuthResponse
-      | BackendErrorResponse;
+    const responseData =
+      await response.json();
 
     if (!response.ok) {
       const errorData =
@@ -211,20 +209,35 @@ export async function loginUser(
       };
     }
 
-    const loginData =
-      responseData as BackendAuthResponse;
+    /*
+     * Validate the successful backend response
+     * using the shared response schema.
+     */
+    const parsedResponse =
+      AUTH_CONTRACTS.login.responseBody.safeParse(
+        responseData
+      );
 
-    if (!loginData.token) {
+    if (!parsedResponse.success) {
+      console.error(
+        'Invalid login response:',
+        parsedResponse.error
+      );
+
       return {
         success: false,
         message:
-          'Login failed. No authentication token was returned.',
+          'Login failed. Invalid response from the server.',
       };
     }
 
+    const loginData =
+      parsedResponse.data;
+
     return {
       success: true,
-      message: 'Login successful.',
+      message:
+        'Login successful.',
       token: loginData.token,
     };
   } catch (error) {
