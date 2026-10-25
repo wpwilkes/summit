@@ -40,16 +40,15 @@ export const ForgotPasswordRequestSchema = z.object({
   email: z.email(),
 });
 
-export type ForgotPasswordRequest =
-  z.infer<typeof ForgotPasswordRequestSchema>;
+export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequestSchema>;
 
 export const ForgotPasswordResponseSchema = z.object({
   message: z.string(),
 });
 
-export type ForgotPasswordResponse =
-  z.infer<typeof ForgotPasswordResponseSchema>;
-
+export type ForgotPasswordResponse = z.infer<
+  typeof ForgotPasswordResponseSchema
+>;
 
 export const ResetPasswordRequestSchema = z.object({
   email: z.email(),
@@ -57,12 +56,10 @@ export const ResetPasswordRequestSchema = z.object({
   newPassword: z.string().min(8).max(64),
 });
 
-export type ResetPasswordRequest =
-  z.infer<typeof ResetPasswordRequestSchema>;
+export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>;
 
 export const ResetPasswordResponseSchema = z.object({
   message: z.string(),
 });
 
-export type ResetPasswordResponse =
-  z.infer<typeof ResetPasswordResponseSchema>;
+export type ResetPasswordResponse = z.infer<typeof ResetPasswordResponseSchema>;
