@@ -35,3 +35,34 @@ export const RegisterRequestSchema = z.object({
   password: z.string().min(8).max(64),
 });
 export type RegisterRequest = z.infer<typeof RegisterRequestSchema>;
+
+export const ForgotPasswordRequestSchema = z.object({
+  email: z.email(),
+});
+
+export type ForgotPasswordRequest =
+  z.infer<typeof ForgotPasswordRequestSchema>;
+
+export const ForgotPasswordResponseSchema = z.object({
+  message: z.string(),
+});
+
+export type ForgotPasswordResponse =
+  z.infer<typeof ForgotPasswordResponseSchema>;
+
+
+export const ResetPasswordRequestSchema = z.object({
+  email: z.email(),
+  code: z.string().regex(/^\d{6}$/),
+  newPassword: z.string().min(8).max(64),
+});
+
+export type ResetPasswordRequest =
+  z.infer<typeof ResetPasswordRequestSchema>;
+
+export const ResetPasswordResponseSchema = z.object({
+  message: z.string(),
+});
+
+export type ResetPasswordResponse =
+  z.infer<typeof ResetPasswordResponseSchema>;

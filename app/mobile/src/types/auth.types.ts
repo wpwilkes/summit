@@ -1,14 +1,20 @@
-export type SignupRequest = {
-  username: string;
-  email: string;
-  password: string;
-};
+import type {
+  LoginRequest as SharedLoginRequest,
+  RegisterRequest,
+} from '@summit/shared';
 
-export type LoginRequest = {
-  email: string;
-  password: string;
-};
+/*
+ * Login and registration request types come
+ * from the shared API contract.
+ */
+export type LoginRequest = SharedLoginRequest;
+export type SignupRequest = RegisterRequest;
 
+/*
+ * These types remain local for now because
+ * their real backend contracts are not yet
+ * available in shared.
+ */
 export type VerifyEmailRequest = {
   email: string;
   code: string;
@@ -28,6 +34,10 @@ export type ResetPasswordRequest = {
   newPassword: string;
 };
 
+/*
+ * These are UI/service result types.
+ * They are different from the raw backend response.
+ */
 export type AuthResponse = {
   success: boolean;
   message: string;
