@@ -17,4 +17,26 @@ export type RootStackParamList = {
   };
 
   Home: undefined;
+
+  Popular: undefined;
+
+  News: undefined;
+
+  DiscoverCommunities: undefined;
+
+  TopicCommunities: {
+    topic: string;
+  };
+
+  SubtopicCommunities: {
+    topic: string;
+    subtopic: string;
+  };
+
+  Community: {
+    communityId: string;
+    communityName: string;
+  };
+
+  StartCommunity: undefined;
 };

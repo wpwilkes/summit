@@ -1,7 +1,17 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
 import PostIcon from './PostIcon';
-import type { PostsDestinationName } from './PostsSidebar';
 import { colors, ui } from './postsTheme';
+
+export type PostsDestinationName =
+  | 'popular'
+  | 'news';
+
 
 /**
  * Handoff to the teammate implementing Popular/News.
