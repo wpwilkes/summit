@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -7,9 +10,18 @@ import {
 } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import {
+  NavigationContainer,
+} from '@react-navigation/native';
+
+import {
+  createNativeStackNavigator,
+} from '@react-navigation/native-stack';
+
+import {
+  SafeAreaProvider,
+} from 'react-native-safe-area-context';
 
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import PublicFeedScreen from './src/screens/PublicFeedScreen';
@@ -20,70 +32,93 @@ import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import HomeScreen from './src/screens/HomeScreen';
 
-import { RootStackParamList } from './src/types/navigation.types';
-import { getAuthToken } from './src/utils/tokenStorage';
+import PopularScreen from './src/screens/PopularScreen';
+import NewsScreen from './src/screens/NewsScreen';
+
+import DiscoverCommunitiesScreen from './src/screens/DiscoverCommunitiesScreen';
+import TopicCommunitiesScreen from './src/screens/TopicCommunitiesScreen';
+import SubtopicCommunitiesScreen from './src/screens/SubtopicCommunitiesScreen';
+import CommunityScreen from './src/screens/CommunityScreen';
+import StartCommunityScreen from './src/screens/StartCommunityScreen';
+
+import type {
+  RootStackParamList,
+} from './src/types/navigation.types';
+
+import {
+  getAuthToken,
+} from './src/utils/tokenStorage';
 
 const Stack =
-  createNativeStackNavigator<RootStackParamList>();
+  createNativeStackNavigator<
+    RootStackParamList
+  >();
 
 type InitialRoute =
   | 'Welcome'
   | 'Home';
 
 export default function App() {
-  const [initialRoute, setInitialRoute] =
-    useState<InitialRoute>('Welcome');
+  const [
+    initialRoute,
+    setInitialRoute,
+  ] =
+    useState<InitialRoute>(
+      'Welcome',
+    );
 
-  const [isCheckingAuth, setIsCheckingAuth] =
-    useState(true);
+  const [
+    isCheckingAuth,
+    setIsCheckingAuth,
+  ] = useState(true);
 
   useEffect(() => {
-    const checkStoredLogin = async () => {
-      try {
-        /*
-         * Check SecureStore when Summit starts.
-         *
-         * If a token exists, open the authenticated
-         * Home screen.
-         *
-         * If no token exists, open Welcome.
-         */
-        const token = await getAuthToken();
+    const checkStoredLogin =
+      async () => {
+        try {
+          const token =
+            await getAuthToken();
 
-        if (token) {
-          setInitialRoute('Home');
-        } else {
-          setInitialRoute('Welcome');
+          if (token) {
+            setInitialRoute(
+              'Home',
+            );
+          } else {
+            setInitialRoute(
+              'Welcome',
+            );
+          }
+        } catch {
+          setInitialRoute(
+            'Welcome',
+          );
+        } finally {
+          setIsCheckingAuth(
+            false,
+          );
         }
-      } catch {
-        /*
-         * If SecureStore cannot be read,
-         * safely show the Welcome screen.
-         */
-        setInitialRoute('Welcome');
-      } finally {
-        setIsCheckingAuth(false);
-      }
-    };
+      };
 
     checkStoredLogin();
   }, []);
 
-  /*
-   * Do not briefly show Welcome or Login while
-   * SecureStore is still being checked.
-   */
   if (isCheckingAuth) {
     return (
       <SafeAreaProvider>
-        <View style={styles.loadingContainer}>
+        <View
+          style={
+            styles.loadingContainer
+          }
+        >
           <ActivityIndicator
             size="large"
             color="#e7c86e"
           />
         </View>
 
-        <StatusBar style="light" />
+        <StatusBar
+          style="light"
+        />
       </SafeAreaProvider>
     );
   }
@@ -92,16 +127,21 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName={initialRoute}
+          initialRouteName={
+            initialRoute
+          }
           screenOptions={{
             contentStyle: {
-              backgroundColor: '#0f0f10',
+              backgroundColor:
+                '#0f0f10',
             },
           }}
         >
           <Stack.Screen
             name="Welcome"
-            component={WelcomeScreen}
+            component={
+              WelcomeScreen
+            }
             options={{
               headerShown: false,
             }}
@@ -109,7 +149,9 @@ export default function App() {
 
           <Stack.Screen
             name="PublicFeed"
-            component={PublicFeedScreen}
+            component={
+              PublicFeedScreen
+            }
             options={{
               headerShown: false,
             }}
@@ -117,7 +159,9 @@ export default function App() {
 
           <Stack.Screen
             name="Login"
-            component={LoginScreen}
+            component={
+              LoginScreen
+            }
             options={{
               headerShown: false,
             }}
@@ -125,7 +169,9 @@ export default function App() {
 
           <Stack.Screen
             name="Signup"
-            component={SignupScreen}
+            component={
+              SignupScreen
+            }
             options={{
               headerShown: false,
             }}
@@ -133,7 +179,9 @@ export default function App() {
 
           <Stack.Screen
             name="EmailVerification"
-            component={EmailVerificationScreen}
+            component={
+              EmailVerificationScreen
+            }
             options={{
               headerShown: false,
             }}
@@ -141,7 +189,9 @@ export default function App() {
 
           <Stack.Screen
             name="ForgotPassword"
-            component={ForgotPasswordScreen}
+            component={
+              ForgotPasswordScreen
+            }
             options={{
               headerShown: false,
             }}
@@ -149,7 +199,9 @@ export default function App() {
 
           <Stack.Screen
             name="ResetPassword"
-            component={ResetPasswordScreen}
+            component={
+              ResetPasswordScreen
+            }
             options={{
               headerShown: false,
             }}
@@ -157,7 +209,79 @@ export default function App() {
 
           <Stack.Screen
             name="Home"
-            component={HomeScreen}
+            component={
+              HomeScreen
+            }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="Popular"
+            component={
+              PopularScreen
+            }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="News"
+            component={
+              NewsScreen
+            }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="DiscoverCommunities"
+            component={
+              DiscoverCommunitiesScreen
+            }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="TopicCommunities"
+            component={
+              TopicCommunitiesScreen
+            }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="SubtopicCommunities"
+            component={
+              SubtopicCommunitiesScreen
+            }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="Community"
+            component={
+              CommunityScreen
+            }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="StartCommunity"
+            component={
+              StartCommunityScreen
+            }
             options={{
               headerShown: false,
             }}
@@ -170,11 +294,14 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#0f0f10',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+const styles =
+  StyleSheet.create({
+    loadingContainer: {
+      flex: 1,
+      backgroundColor:
+        '#0f0f10',
+      justifyContent:
+        'center',
+      alignItems: 'center',
+    },
+  });
