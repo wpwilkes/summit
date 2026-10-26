@@ -18,11 +18,23 @@ async function _registerUser() {
   };
 }
 
+async function _createCommunity(token: string): Promise<number> {
+  const name = `test_${randomUUID().slice(0, 8)}`;
+  const response = await request(app)
+    .post('/api/communities')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name, description: 'Test community' });
+  assert.equal(response.status, 201);
+  return response.body.community.id as number;
+}
+
 async function _createPost(token: string) {
+  const communityId = await _createCommunity(token);
   const response = await request(app)
     .post('/api/posts')
     .set('Authorization', `Bearer ${token}`)
     .send({
+      communityId,
       title: 'Test post',
       body: 'This is a test post.',
     });
@@ -49,10 +61,12 @@ function _assertApiError(
 
 test('POST /api/posts creates a new post', async () => {
   const user = await _registerUser();
+  const communityId = await _createCommunity(user.token);
   const response = await request(app)
     .post('/api/posts')
     .set('Authorization', `Bearer ${user.token}`)
     .send({
+      communityId,
       title: 'My first post',
       body: 'Hello Summit!',
     });
@@ -86,10 +100,12 @@ test('POST /api/posts returns 401 for an invalid token', async () => {
 
 test('POST /api/posts returns 400 for invalid data', async () => {
   const user = await _registerUser();
+  const communityId = await _createCommunity(user.token);
   const response = await request(app)
     .post('/api/posts')
     .set('Authorization', `Bearer ${user.token}`)
     .send({
+      communityId,
       title: '',
       body: 'This post has no title.',
     });
@@ -98,10 +114,12 @@ test('POST /api/posts returns 400 for invalid data', async () => {
 
 test('POST /api/posts uses the authenticated author', async () => {
   const user = await _registerUser();
+  const communityId = await _createCommunity(user.token);
   const response = await request(app)
     .post('/api/posts')
     .set('Authorization', `Bearer ${user.token}`)
     .send({
+      communityId,
       title: 'Author test',
       body: 'Testing author ownership.',
       authorId: 999999,

@@ -5,10 +5,20 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 
 async function _createPost(token: string) {
+  const communityResponse = await request(app)
+    .post('/api/communities')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      name: `test_${randomUUID().slice(0, 8)}`,
+      description: 'Comment voting test community',
+    });
+  assert.equal(communityResponse.status, 201);
+
   const response = await request(app)
     .post('/api/posts')
     .set('Authorization', `Bearer ${token}`)
     .send({
+      communityId: communityResponse.body.community.id,
       title: 'Comment voting test',
       body: 'Testing comment votes.',
     });

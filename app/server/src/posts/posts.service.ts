@@ -1,4 +1,6 @@
 import { AppError } from '../errors/app.error.js';
+import { getCommunityById } from '../communities/communities.repositories.js';
+import { toPostContract } from './posts.mapper.js';
 import {
   createPost,
   getAllPosts,
@@ -9,7 +11,6 @@ import {
   updatePost,
 } from './posts.repositories.js';
 import type {
-  Post,
   CreatePostRequest,
   CreatePostResponse,
   GetAllPostsResponse,
@@ -23,17 +24,6 @@ import type {
 
 type DatabasePost = Awaited<ReturnType<typeof createPost>>;
 
-function toPostContract(post: DatabasePost): Post {
-  return {
-    id: post.id,
-    title: post.title,
-    body: post.body,
-    authorId: post.authorId,
-    votes: post.vote,
-    createdAt: post.createdAt.toISOString(),
-  };
-}
-
 async function requireExistingPost(id: number): Promise<DatabasePost> {
   const post = await getByIdPost(id);
   if (!post) {
@@ -46,7 +36,16 @@ export async function createPostService(
   data: CreatePostRequest,
   userId: number,
 ): Promise<CreatePostResponse> {
-  const post = await createPost(data.title, data.body, userId);
+  const community = await getCommunityById(data.communityId);
+  if (!community) {
+    throw new AppError(404, 'COMMUNITY_NOT_FOUND', 'Community not found.');
+  }
+  const post = await createPost(
+    data.title,
+    data.body,
+    userId,
+    data.communityId,
+  );
   return {
     post: toPostContract(post),
   };

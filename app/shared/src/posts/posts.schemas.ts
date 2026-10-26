@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const PostSchema = z.object({
   id: z.int().positive(),
+  communityId: z.int().positive(),
   title: z.string().nonempty(),
   body: z.string().nonempty(),
   authorId: z.int().positive(),
@@ -16,6 +17,7 @@ export const PostIdParamsSchema = z.object({
 export type PostIdParams = z.infer<typeof PostIdParamsSchema>;
 
 export const CreatePostRequestSchema = z.object({
+  communityId: z.int().positive(),
   title: z.string().nonempty(),
   body: z.string().nonempty(),
 });
@@ -71,10 +73,14 @@ export const RemovePostResponseSchema = z.object({
 });
 export type RemovePostResponse = z.infer<typeof RemovePostResponseSchema>;
 
-export const UpdatePostRequestSchema = CreatePostRequestSchema.partial().refine(
-  (data) => data.title !== undefined || data.body !== undefined,
-  { message: 'Provide a title or body to update.' },
-);
+export const UpdatePostRequestSchema = z
+  .object({
+    title: z.string().optional(),
+    body: z.string().optional(),
+  })
+  .refine((data) => data.title !== undefined || data.body !== undefined, {
+    message: 'Provide a title or body to update.',
+  });
 export type UpdatePostRequest = z.infer<typeof UpdatePostRequestSchema>;
 
 export const UpdatePostResponseSchema = z.object({
