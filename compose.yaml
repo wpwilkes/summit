@@ -47,12 +47,7 @@ services:
       db:
         condition: service_healthy
 
-    volumes:
-      - ./app/server:/server
-      - server_node_modules:/server/node_modules
-
     stop_grace_period: 10s
 
 volumes:
   summit_postgres_data:
-  server_node_modules:
