@@ -3,4 +3,5 @@ export const BASE_PATHS = {
   comments: '/api/comments',
   ping: '/api/ping',
   posts: '/api/posts',
+  search: '/api/search',
 } as const;

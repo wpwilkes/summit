@@ -59,6 +59,8 @@ type Props = {
 
   onNewsPress: () => void;
 
+  onSearchPress: () => void;
+
   onDiscoverCommunitiesPress: () => void;
 
   onStartCommunityPress: () => void;
@@ -82,6 +84,7 @@ export default function SummitPostsScreen({
   logoutError,
   onPopularPress,
   onNewsPress,
+  onSearchPress,
   onDiscoverCommunitiesPress,
   onStartCommunityPress,
   onRecentCommunityPress,
@@ -439,6 +442,9 @@ export default function SummitPostsScreen({
           <PostsHeader
             onMenu={
               openSidebar
+            }
+            onSearch={
+              onSearchPress
             }
             onCreate={() => {
               setEditor({

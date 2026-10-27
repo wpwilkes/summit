@@ -39,4 +39,6 @@ export type RootStackParamList = {
   };
 
   StartCommunity: undefined;
+
+  Search: undefined;
 };
