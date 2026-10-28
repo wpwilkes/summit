@@ -18,23 +18,27 @@ model User {
   comments     Comment[]
   postVotes PostVote[]
   commentVotes CommentVote[]
+  createdCommunities Community[]
 
   @@map("users")
 }
 
 model Post {
-  id        Int       @id @default(autoincrement())
-  authorId  Int       @map("author_id")
-  title     String
-  body      String
-  vote      Int       @default(0)
-  createdAt DateTime  @default(now()) @map("created_at")
+  id          Int      @id @default(autoincrement())
+  authorId    Int      @map("author_id")
+  communityId Int      @map("community_id")
+  title       String
+  body        String
+  vote        Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
 
   author    User      @relation(fields: [authorId], references: [id])
+  community Community @relation(fields: [communityId], references: [id])
   comments  Comment[]
   summaries Summary[]
   postVotes PostVote[]
 
+  @@index([communityId, createdAt])
   @@map("posts")
 }
 
@@ -94,4 +98,17 @@ model CommentVote {
 
   @@id([commentId, userId])
   @@map("comment_votes")
+}
+
+model Community {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String   @default("")
+  creatorId   Int      @map("creator_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  creator User   @relation(fields: [creatorId], references: [id])
+  posts   Post[]
+
+  @@map("communities")
 }

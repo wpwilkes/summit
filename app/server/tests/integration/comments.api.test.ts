@@ -34,10 +34,18 @@ async function _createComment(
 }
 
 async function _createPost(token: string) {
+  const communityName = `test_${randomUUID().slice(0, 8)}`;
+  const communityResponse = await request(app)
+    .post('/api/communities')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name: communityName, description: 'Test community' });
+  assert.equal(communityResponse.status, 201);
+  const communityId = communityResponse.body.community.id;
   const response = await request(app)
     .post('/api/posts')
     .set('Authorization', `Bearer ${token}`)
     .send({
+      communityId,
       title: 'Test post',
       body: 'Testing comments.',
     });

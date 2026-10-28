@@ -13,12 +13,14 @@ export async function createPost(
   title: string,
   body: string,
   authorId: number,
+  communityId: number,
 ) {
   return prismaClient.post.create({
     data: {
       title,
       body,
       authorId,
+      communityId,
     },
   });
 }
