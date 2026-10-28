@@ -19,11 +19,24 @@ async function _registerUser() {
   };
 }
 
+// Posts must belong to a community, so make a fresh one for each post.
+async function _createCommunity(token: string): Promise<number> {
+  const name = `search_${randomUUID().slice(0, 8)}`;
+  const response = await request(app)
+    .post('/api/communities')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name, description: 'Search test community' });
+  assert.equal(response.status, 201);
+  return response.body.community.id as number;
+}
+
 async function _createPost(token: string, title: string, body: string) {
+  const communityId = await _createCommunity(token);
   const response = await request(app)
     .post('/api/posts')
     .set('Authorization', `Bearer ${token}`)
-    .send({ title, body });
+    .send({ communityId, title, body });
+  assert.equal(response.status, 201);
   return response.body.post;
 }
 
