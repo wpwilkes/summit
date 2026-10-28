@@ -1,8 +1,5 @@
 import { searchPosts } from './search.repositories.js';
-import type {
-  SearchPostResult,
-  SearchPostsResponse,
-} from '@summit/shared';
+import type { SearchPostResult, SearchPostsResponse } from '@summit/shared';
 
 type DatabaseSearchPost = Awaited<ReturnType<typeof searchPosts>>[number];
 
