@@ -1,4 +1,5 @@
 import app from '../../src/app';
+import { getTestVerificationCode } from '../../src/auth/verification/verification.console.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import request from 'supertest';
@@ -11,6 +12,12 @@ test('POST /api/auth/login logs in an existing user', async () => {
     password: 'securepass123',
   };
   await request(app).post('/api/auth/register').send(user);
+  const code = getTestVerificationCode(user.email);
+  assert.ok(code);
+  const verification = await request(app)
+    .post('/api/auth/verify-email')
+    .send({ email: user.email, code });
+  assert.equal(verification.status, 200);
 
   const response = await request(app).post('/api/auth/login').send({
     email: user.email,
@@ -47,14 +54,22 @@ test('GET /api/auth/me returns the authenticated user', async () => {
     username: `metest${suffix}`,
     password: 'securepass123',
   };
-  const registerResponse = await request(app)
-    .post('/api/auth/register')
-    .send(user);
-  const token = registerResponse.body.token;
+  await request(app).post('/api/auth/register').send(user);
+  const code = getTestVerificationCode(user.email);
+  assert.ok(code);
+  const verification = await request(app)
+    .post('/api/auth/verify-email')
+    .send({ email: user.email, code });
+  assert.equal(verification.status, 200);
+
+  const loginResponse = await request(app)
+    .post('/api/auth/login')
+    .send({ email: user.email, password: user.password });
+  assert.equal(loginResponse.status, 200);
 
   const response = await request(app)
     .get('/api/auth/me')
-    .set('Authorization', `Bearer ${token}`);
+    .set('Authorization', `Bearer ${loginResponse.body.token}`);
 
   assert.equal(response.status, 200);
   assert.equal(response.body.user.email, user.email);
@@ -63,11 +78,10 @@ test('GET /api/auth/me returns the authenticated user', async () => {
 
 test('GET /api/auth/me returns 401 without a token', async () => {
   const response = await request(app).get('/api/auth/me');
-
   assert.equal(response.status, 401);
 });
 
-test('POST /api/auth/register creates a new user and returns a token', async () => {
+test('POST /api/auth/register creates a new unverified user', async () => {
   const suffix = Date.now();
   const user = {
     email: `registertest-${suffix}@example.com`,
@@ -78,7 +92,6 @@ test('POST /api/auth/register creates a new user and returns a token', async () 
   const response = await request(app).post('/api/auth/register').send(user);
 
   assert.equal(response.status, 201);
-  assert.equal(response.body.user.email, user.email);
-  assert.equal(response.body.user.username, user.username);
-  assert.equal(typeof response.body.token, 'string');
+  assert.equal(typeof response.body.message, 'string');
+  assert.equal(response.body.token, undefined);
 });
