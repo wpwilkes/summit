@@ -1,4 +1,4 @@
-import { AppError } from '../errors/app.error.js';
+import { AppError } from '../../errors/app.error.js';
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 

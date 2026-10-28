@@ -8,12 +8,11 @@ export const UserSchema = z.object({
 });
 export type User = z.infer<typeof UserSchema>;
 
-export const AuthResponseSchema = z.object({
+export const LoginResponseSchema = z.object({
   user: UserSchema,
   token: z.string().nonempty(),
 });
-export type LoginResponse = z.infer<typeof AuthResponseSchema>;
-export type RegisterResponse = z.infer<typeof AuthResponseSchema>;
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
 export const LoginRequestSchema = z.object({
   email: z.email(),
@@ -35,6 +34,36 @@ export const RegisterRequestSchema = z.object({
   password: z.string().min(8).max(64),
 });
 export type RegisterRequest = z.infer<typeof RegisterRequestSchema>;
+
+export const RegisterResponseSchema = z.object({
+  message: z.string(),
+});
+export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
+
+export const VerifyEmailRequestSchema = z.object({
+  email: z.email(),
+  code: z.string(),
+});
+export type VerifyEmailRequest = z.infer<typeof VerifyEmailRequestSchema>;
+
+export const VerifyEmailResponseSchema = z.object({
+  message: z.string(),
+});
+export type VerifyEmailResponse = z.infer<typeof VerifyEmailResponseSchema>;
+
+export const ResendVerificationRequestSchema = z.object({
+  email: z.email(),
+});
+export type ResendVerificationRequest = z.infer<
+  typeof ResendVerificationRequestSchema
+>;
+
+export const ResendVerificationResponseSchema = z.object({
+  message: z.string(),
+});
+export type ResendVerificationResponse = z.infer<
+  typeof ResendVerificationResponseSchema
+>;
 
 export const ForgotPasswordRequestSchema = z.object({
   email: z.email(),
