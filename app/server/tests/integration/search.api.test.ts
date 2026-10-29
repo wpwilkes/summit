@@ -1,22 +1,13 @@
 import app from '../../src/app';
+import { registerVerifiedUser } from './helpers/register-verified-user.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 
-// Sign up a brand new user so every test run is independent.
+// Sign up a brand new, email-verified user so every test run is independent.
 async function _registerUser() {
-  const suffix = randomUUID().slice(0, 8);
-  const user = {
-    email: `searchtest-${suffix}@example.com`,
-    username: `searchtest${suffix}`,
-    password: 'securepass123',
-  };
-  const response = await request(app).post('/api/auth/register').send(user);
-  return {
-    username: user.username,
-    token: response.body.token as string,
-  };
+  return registerVerifiedUser('searchtest');
 }
 
 // Posts must belong to a community, so make a fresh one for each post.
