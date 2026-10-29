@@ -1,4 +1,4 @@
-import { requireAuth } from '../auth/auth.middleware.js';
+import { requireAuth } from '../auth/middleware/middleware.js';
 import {
   createCommunityController,
   getAllCommunitiesController,
