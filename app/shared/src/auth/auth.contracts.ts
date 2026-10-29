@@ -55,7 +55,7 @@ export const AUTH_CONTRACTS = {
     responseBody: ResetPasswordResponseSchema,
   },
   verifyEmail: {
-    method: HTTP_METHOD.get,
+    method: HTTP_METHOD.post,
     path: AUTH_PATHS.verifyEmail,
     requestBody: VerifyEmailRequestSchema,
     responseBody: VerifyEmailResponseSchema,
