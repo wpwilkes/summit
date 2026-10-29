@@ -1,4 +1,5 @@
 import app from '../../src/app';
+import { registerVerifiedUser } from './helpers/register-verified-user.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
@@ -67,19 +68,7 @@ async function _createReply(
 }
 
 async function _registerUser() {
-  const suffix = randomUUID().slice(0, 8);
-  const response = await request(app)
-    .post('/api/auth/register')
-    .send({
-      email: `commenttest-${suffix}@example.com`,
-      username: `comment${suffix}`,
-      password: 'securepass123',
-    });
-  assert.equal(response.status, 201);
-  return {
-    id: response.body.user.id as number,
-    token: response.body.token as string,
-  };
+  return registerVerifiedUser('comment');
 }
 
 test('POST creates a comment on a post', async () => {

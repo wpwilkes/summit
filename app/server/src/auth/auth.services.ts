@@ -1,10 +1,5 @@
 import { AppError } from '../errors/app.error.js';
-import {
-  createUser,
-  findByEmail,
-  findById,
-  findByUsername,
-} from './auth.repositories.js';
+import { findByEmail, findById, findByUsername } from './auth.repositories.js';
 import type {
   LoginRequest,
   LoginResponse,
@@ -13,6 +8,9 @@ import type {
   RegisterResponse,
   User as UserContract,
 } from '@summit/shared';
+import { createVerificationCode } from './verification/verification.code.js';
+import { sendVerificationCode } from './verification/verification.console.js';
+import { createUnverifiedUser } from './verification/verification.repositories.js';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 
@@ -65,6 +63,13 @@ export async function loginService(
   if (!passwordIsValid) {
     throw new AppError(401, 'INVALID_CREDENTIALS', 'Invalid password.');
   }
+  if (user.emailVerifiedAt === null) {
+    throw new AppError(
+      403,
+      'EMAIL_NOT_VERIFIED',
+      'Verify your email before logging in.',
+    );
+  }
   return {
     user: toUserContract(user),
     token: createToken(user.id.toString()),
@@ -95,9 +100,16 @@ export async function registerService(
     throw new AppError(409, 'USERNAME_TAKEN', 'Username already taken.');
   }
   const passwordHash = await argon2.hash(request.password);
-  const user = await createUser(email, username, passwordHash);
+  const verification = createVerificationCode(email);
+  await createUnverifiedUser(
+    email,
+    username,
+    passwordHash,
+    verification.codeHash,
+    verification.expiresAt,
+  );
+  sendVerificationCode(email, verification.code);
   return {
-    user: toUserContract(user),
-    token: createToken(user.id.toString()),
+    message: 'Registration successful. Verify your email before logging in.',
   };
 }

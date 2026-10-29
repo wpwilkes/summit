@@ -1,21 +1,12 @@
 import app from '../../src/app';
+import { registerVerifiedUser } from './helpers/register-verified-user.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 
 async function _registerUser() {
-  const suffix = randomUUID().slice(0, 8);
-  const user = {
-    email: `posttest-${suffix}@example.com`,
-    username: `posttest${suffix}`,
-    password: 'securepass123',
-  };
-  const response = await request(app).post('/api/auth/register').send(user);
-  return {
-    id: response.body.user.id as number,
-    token: response.body.token as string,
-  };
+  return registerVerifiedUser('posttest');
 }
 
 async function _createCommunity(token: string): Promise<number> {

@@ -1,4 +1,5 @@
-import app from '../../src/app';
+import app from '../../src/app.js';
+import { registerVerifiedUser } from './helpers/register-verified-user.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
@@ -9,19 +10,7 @@ function _uniqueName() {
 }
 
 async function _registerUser() {
-  const name = _uniqueName();
-  const response = await request(app)
-    .post('/api/auth/register')
-    .send({
-      email: `${name}@example.com`,
-      username: name,
-      password: 'securepass123',
-    });
-  assert.equal(response.status, 201);
-  return {
-    id: response.body.user.id as number,
-    token: response.body.token as string,
-  };
+  return registerVerifiedUser('test');
 }
 
 async function _createCommunity(token: string, name = _uniqueName()) {
