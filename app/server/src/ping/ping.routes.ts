@@ -5,7 +5,7 @@ import {
 import { PING_CONTRACTS } from '@summit/shared';
 import { Router } from 'express';
 
-const pingRouter: Router = Router();
+const pingRouter = Router();
 
 pingRouter.get(PING_CONTRACTS.database.path, pingDatabaseController);
 pingRouter.get(PING_CONTRACTS.server.path, pingServerController);

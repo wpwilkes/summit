@@ -1,14 +1,7 @@
+import { getByIdPost } from './posts.repositories.js';
 import type { Post } from '@summit/shared';
 
-type DatabasePost = {
-  id: number;
-  communityId: number;
-  authorId: number;
-  title: string;
-  body: string;
-  vote: number;
-  createdAt: Date;
-};
+export type DatabasePost = NonNullable<Awaited<ReturnType<typeof getByIdPost>>>;
 
 export function toPostContract(post: DatabasePost): Post {
   return {

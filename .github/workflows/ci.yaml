@@ -49,11 +49,14 @@ jobs:
     needs: test-shared
 
     env:
-      POSTGRES_USER: summit_test
-      POSTGRES_PASSWORD: summit_test
+      JWT_SECRET: some-long-random-access-secret
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
-      POSTGRES_DB: summit_test
+      POSTGRES_USER: summit_test_uid
+      POSTGRES_PASSWORD: summit_test_pwd
+      POSTGRES_DB: summit_ci
+      SERVER_BIND_ADDRESS: 0.0.0.0
+      SERVER_PORT: 3000
 
     steps:
       - name: Checkout repository
@@ -80,13 +83,13 @@ jobs:
         working-directory: app/server
         run: npm ci
 
-      - name: Check formatting
-        working-directory: app/server
-        run: npm run format:check
-
       - name: Generate prisma
         working-directory: app/server
         run: npm run prisma:generate:git
+
+      - name: Check formatting
+        working-directory: app/server
+        run: npm run format:check
 
       - name: Lint
         working-directory: app/server
@@ -96,16 +99,16 @@ jobs:
         working-directory: app/server
         run: npm run typecheck
 
-      - name: Run tests
-        working-directory: app/server
-        run: npm run test:unit
-
       - name: Build server
         working-directory: app/server
         run: npm run build
 
-  test-docker:
-    name: Test Docker
+      - name: Run unit tests
+        working-directory: app/server
+        run: npm run test:unit
+
+  test-integration:
+    name: Test Integration
     runs-on: ubuntu-latest
     needs: test-server
 
@@ -116,14 +119,14 @@ jobs:
       - name: Create CI environment file
         run: |
           cat > .env <<EOF
-          SERVER_HOST=0.0.0.0
-          SERVER_PORT=3000
           JWT_SECRET=some-long-random-access-secret
           POSTGRES_HOST=db
           POSTGRES_PORT=5432
           POSTGRES_USER=summit_ci
           POSTGRES_PASSWORD=summit_ci
           POSTGRES_DB=summit_ci
+          SERVER_BIND_ADDRESS=0.0.0.0
+          SERVER_PORT=3000
           EOF
 
       - name: Validate Docker Compose

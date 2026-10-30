@@ -19,7 +19,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
         ]
       interval: 5s
       timeout: 5s
@@ -27,27 +27,26 @@ services:
       start_period: 10s
 
   server:
-    build:
-      context: ./app
-      dockerfile: server/Dockerfile
-
-    env_file:
-      - .env
-
-    init: true
-
-    ports:
-      - "${SERVER_PORT}:3000"
-
-    environment:
-      SERVER_HOST: 0.0.0.0
-      POSTGRES_HOST: db
-
     depends_on:
       db:
         condition: service_healthy
 
-    stop_grace_period: 10s
+    build:
+      context: ./app
+      dockerfile: server/Dockerfile
+
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      SERVER_BIND_ADDRESS: 0.0.0.0
+      SERVER_PORT: ${SERVER_PORT}
+
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
 
 volumes:
   summit_postgres_data:

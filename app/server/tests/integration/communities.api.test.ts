@@ -63,7 +63,7 @@ test('POST /api/communities rejects duplicate names', async () => {
       description: 'Duplicate',
     });
   assert.equal(response.status, 409);
-  assert.equal(response.body.error.code, 'COMMUNITY_EXISTS');
+  assert.equal(response.body.error.code, 'COMMUNITY_ALREADY_EXISTS');
 });
 
 test('GET /api/communities returns communities', async () => {

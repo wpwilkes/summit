@@ -2,7 +2,7 @@ import { Prisma } from '../generated/prisma/client.js';
 import { prismaClient } from '../lib/prisma.js';
 import type { PostVoteValue } from '@summit/shared';
 
-function _normalizeVote(value: number | undefined): PostVoteValue {
+function normalizeVote(value: number | undefined): PostVoteValue {
   if (value === 1 || value === -1) {
     return value;
   }
@@ -31,60 +31,56 @@ export async function getAllPosts() {
   });
 }
 
-export async function getByIdPost(id: number) {
+export async function getByIdPost(postId: number) {
   return prismaClient.post.findUnique({
-    where: { id },
+    where: { id: postId },
   });
 }
 
-export async function removePost(id: number) {
+export async function getCommunityById(communityId: number) {
+  return prismaClient.community.findUnique({
+    where: { id: communityId },
+  });
+}
+
+export async function removePost(postId: number) {
   return prismaClient.$transaction(async (tx) => {
     await tx.summary.deleteMany({
-      where: { postId: id },
+      where: { postId: postId },
     });
-
     await tx.comment.deleteMany({
-      where: { postId: id },
+      where: { postId: postId },
     });
-
+    await tx.postVote.deleteMany({
+      where: { postId: postId },
+    });
     return tx.post.delete({
-      where: { id },
+      where: { id: postId },
     });
   });
 }
 
 export async function updatePost(
-  id: number,
+  postId: number,
   data: {
     title?: string;
     body?: string;
   },
 ) {
   return prismaClient.post.update({
-    where: { id },
+    where: { id: postId },
     data,
   });
 }
 
 export async function getPostVote(postId: number, userId: number) {
-  const post = await prismaClient.post.findUnique({
-    where: { id: postId },
-    select: { vote: true },
-  });
-
-  if (!post) {
-    return null;
-  }
-
   const existingVote = await prismaClient.postVote.findUnique({
     where: {
       postId_userId: { postId, userId },
     },
   });
-
   return {
-    votes: post.vote,
-    userVote: _normalizeVote(existingVote?.value),
+    vote: normalizeVote(existingVote?.value),
   };
 }
 
@@ -98,24 +94,14 @@ export async function setPostVote(
       const post = await tx.post.findUnique({
         where: { id: postId },
       });
-
-      if (!post) return null;
-
-      const where = {
-        postId_userId: { postId, userId },
-      };
-
+      const where = { postId_userId: { postId, userId } };
       const existing = await tx.postVote.findUnique({ where });
-      const previous = _normalizeVote(existing?.value);
-
+      const previous = existing?.value ?? 0;
       if (previous === value) {
-        return { votes: post.vote, userVote: value };
+        return { votes: post!.vote, userVote: value };
       }
-
       if (value === 0) {
-        if (existing) {
-          await tx.postVote.delete({ where });
-        }
+        await tx.postVote.delete({ where });
       } else {
         await tx.postVote.upsert({
           where,
@@ -123,14 +109,12 @@ export async function setPostVote(
           update: { value },
         });
       }
-
       const updated = await tx.post.update({
         where: { id: postId },
         data: {
           vote: { increment: value - previous },
         },
       });
-
       return {
         votes: updated.vote,
         userVote: value,

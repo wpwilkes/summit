@@ -11,7 +11,7 @@ import {
 import { POSTS_CONTRACTS } from '@summit/shared';
 import { Router } from 'express';
 
-const postsRouter: Router = Router();
+const postsRouter = Router();
 
 postsRouter.post(
   POSTS_CONTRACTS.create.path,

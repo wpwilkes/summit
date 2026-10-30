@@ -1,0 +1,22 @@
+export class ErrorCode {
+  static readonly COMMUNITY_ALREADY_EXISTS = 'COMMUNITY_ALREADY_EXISTS';
+  static readonly COMMENT_DELETED = 'COMMENT_DELETED';
+  static readonly COMMENT_NOT_FOUND = 'COMMENT_NOT_FOUND';
+  static readonly COMMUNITY_NOT_FOUND = 'COMMUNITY_NOT_FOUND';
+  static readonly EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
+  static readonly EMAIL_TAKEN = 'EMAIL_TAKEN';
+  static readonly FORBIDDEN = 'FORBIDDEN';
+  static readonly POST_NOT_FOUND = 'POST_NOT_FOUND';
+  static readonly INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR';
+  static readonly INVALID_COMMENT_ID = 'INVALID_COMMENT_ID';
+  static readonly INVALID_CREDENTIALS = 'INVALID_CREDENTIALS';
+  static readonly INVALID_POST_ID = 'INVALID_POST_ID';
+  static readonly INVALID_REQUEST = 'INVALID_REQUEST';
+  static readonly INVALID_TOKEN = 'INVALID_TOKEN';
+  static readonly INVALID_VERIFICATION_CODE = 'INVALID_VERIFICATION_CODE';
+  static readonly INVALID_VOTE = 'INVALID_VOTE';
+  static readonly UNAUTHORIZED = 'UNAUTHORIZED';
+  static readonly USER_ALREADY_EXISTS = 'USER_ALREADY_EXISTS';
+  static readonly USERNAME_TAKEN = 'USERNAME_TAKEN';
+  static readonly USER_NOT_FOUND = 'USER_NOT_FOUND';
+}

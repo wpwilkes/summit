@@ -1,4 +1,11 @@
 import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
+import {
+  BodyRequest,
+  ParamsBodyRequest,
+  ParamsRequest,
+} from '../types/requests.js';
 import {
   createCommunityService,
   getAllCommunitiesService,
@@ -8,6 +15,7 @@ import {
 } from './communities.services.js';
 import {
   COMMUNITIES_CONTRACTS,
+  type CommunityNameParams,
   type CreateCommunityRequest,
   type CreateCommunityResponse,
   type GetAllCommunitiesResponse,
@@ -18,40 +26,22 @@ import {
 } from '@summit/shared';
 import type { Request, Response } from 'express';
 
-type CommunityParams = {
-  name: string;
-};
-
-function parseCommunityName(params: CommunityParams): string {
-  const parsed = COMMUNITIES_CONTRACTS.getByName.params.safeParse(params);
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_NAME', 'Invalid community name.');
-  }
-
-  return parsed.data.name;
-}
-
-function requireUserId(request: { userId?: number }): number {
-  if (request.userId === undefined) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
-  }
-  return request.userId;
-}
-
 export async function createCommunityController(
-  request: Request<Record<string, never>, unknown, CreateCommunityRequest>,
+  request: BodyRequest<CreateCommunityRequest>,
   response: Response<CreateCommunityResponse>,
 ): Promise<void> {
-  const userId = requireUserId(request);
   const parsed = COMMUNITIES_CONTRACTS.create.requestBody.safeParse(
     request.body,
   );
   if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid community data.');
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid community data.',
+    );
   }
-  const result = await createCommunityService(parsed.data, userId);
-  const body = COMMUNITIES_CONTRACTS.create.responseBody.parse(result);
-  response.status(201).json(body);
+  const result = await createCommunityService(parsed.data, request.userId!);
+  response.status(HttpStatus.CREATED).json(result);
 }
 
 export async function getAllCommunitiesController(
@@ -59,47 +49,66 @@ export async function getAllCommunitiesController(
   response: Response<GetAllCommunitiesResponse>,
 ): Promise<void> {
   const result = await getAllCommunitiesService();
-  const body = COMMUNITIES_CONTRACTS.getAll.responseBody.parse(result);
-  response.status(200).json(body);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function getCommunityController(
-  request: Request<CommunityParams>,
+  request: ParamsRequest<CommunityNameParams>,
   response: Response<GetCommunityResponse>,
 ): Promise<void> {
-  const name = parseCommunityName(request.params);
-  const result = await getCommunityService(name);
-  const body = COMMUNITIES_CONTRACTS.getByName.responseBody.parse(result);
-  response.status(200).json(body);
-}
-
-export async function updateCommunityController(
-  request: Request<CommunityParams, unknown, UpdateCommunityRequest>,
-  response: Response<UpdateCommunityResponse>,
-): Promise<void> {
-  const userId = requireUserId(request);
-  const name = parseCommunityName(request.params);
-  const parsed = COMMUNITIES_CONTRACTS.update.requestBody.safeParse(
-    request.body,
+  const parsed = COMMUNITIES_CONTRACTS.getByName.params.safeParse(
+    request.params,
   );
   if (!parsed.success) {
     throw new AppError(
-      400,
-      'INVALID_REQUEST',
-      'Invalid community update data.',
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid community name.',
     );
   }
-  const result = await updateCommunityService(name, userId, parsed.data);
-  const body = COMMUNITIES_CONTRACTS.update.responseBody.parse(result);
-  response.status(200).json(body);
+  const result = await getCommunityService(parsed.data.name);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function getCommunityPostsController(
-  request: Request<CommunityParams>,
+  request: Request<CommunityNameParams>,
   response: Response<GetCommunityPostsResponse>,
 ): Promise<void> {
-  const name = parseCommunityName(request.params);
-  const result = await getCommunityPostsService(name);
-  const body = COMMUNITIES_CONTRACTS.getPosts.responseBody.parse(result);
-  response.status(200).json(body);
+  const parsed = COMMUNITIES_CONTRACTS.getPosts.params.safeParse(
+    request.params,
+  );
+  if (!parsed.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid community name.',
+    );
+  }
+  const result = await getCommunityPostsService(parsed.data.name);
+  response.status(HttpStatus.OK).json(result);
+}
+
+export async function updateCommunityController(
+  request: ParamsBodyRequest<CommunityNameParams, UpdateCommunityRequest>,
+  response: Response<UpdateCommunityResponse>,
+): Promise<void> {
+  const paramsParsed = COMMUNITIES_CONTRACTS.update.params.safeParse(
+    request.params,
+  );
+  const bodyParsed = COMMUNITIES_CONTRACTS.update.requestBody.safeParse(
+    request.body,
+  );
+  if (!paramsParsed.success || !bodyParsed.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid community update data.',
+    );
+  }
+  const result = await updateCommunityService(
+    paramsParsed.data.name,
+    request.userId!,
+    bodyParsed.data,
+  );
+  response.status(HttpStatus.OK).json(result);
 }

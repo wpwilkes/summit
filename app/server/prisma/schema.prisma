@@ -8,13 +8,13 @@ datasource db {
 }
 
 model User {
-  id                     Int       @id @default(autoincrement())
-  username               String    @unique
-  email                  String    @unique
-  passwordHash           String    @map("password_hash")
-  createdAt              DateTime  @default(now()) @map("created_at")
-  emailVerifiedAt        DateTime?          @map("email_verified_at")
-  emailVerification      EmailVerification?
+  id                     Int        @id @default(autoincrement())
+  username               String     @unique
+  email                  String     @unique
+  passwordHash           String     @map("password_hash")
+  createdAt              DateTime   @default(now()) @map("created_at")
+  codeHash               String     @map("code_hash")
+  emailVerified          Boolean    @default(false)
 
   posts        Post[]
   comments     Comment[]
@@ -81,7 +81,7 @@ model Summary {
 model PostVote {
   postId Int @map("post_id")
   userId Int @map("user_id")
-  value  Int
+  value  Int @default(0)
 
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -113,16 +113,4 @@ model Community {
   posts   Post[]
 
   @@map("communities")
-}
-
-model EmailVerification {
-  userId         Int      @id @map("user_id")
-  codeHash       String   @map("code_hash")
-  expiresAt      DateTime @map("expires_at")
-  sentAt         DateTime @default(now()) @map("sent_at")
-  failedAttempts Int      @default(0) @map("failed_attempts")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("email_verifications")
 }

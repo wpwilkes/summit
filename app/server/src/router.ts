@@ -6,7 +6,7 @@ import postsRouter from './posts/posts.routes.js';
 import searchRouter from './search/search.routes.js';
 import { Router } from 'express';
 
-const router: Router = Router();
+const router = Router();
 
 router.use(authRouter);
 router.use(commentsRouter);
