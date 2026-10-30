@@ -40,6 +40,7 @@ import TopicCommunitiesScreen from './src/screens/TopicCommunitiesScreen';
 import SubtopicCommunitiesScreen from './src/screens/SubtopicCommunitiesScreen';
 import CommunityScreen from './src/screens/CommunityScreen';
 import StartCommunityScreen from './src/screens/StartCommunityScreen';
+import SearchScreen from './src/screens/SearchScreen';
 
 import type {
   RootStackParamList,
@@ -281,6 +282,16 @@ export default function App() {
             name="StartCommunity"
             component={
               StartCommunityScreen
+            }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="Search"
+            component={
+              SearchScreen
             }
             options={{
               headerShown: false,

@@ -5,10 +5,12 @@ import { colors, ui } from './postsTheme';
 export default function PostsHeader({
   onMenu,
   onCreate,
+  onSearch,
   disabled = false,
 }: {
   onMenu: () => void;
   onCreate: () => void;
+  onSearch: () => void;
   disabled?: boolean;
 }) {
   return (
@@ -22,15 +24,18 @@ export default function PostsHeader({
         >
           <PostIcon name="menu" />
         </Pressable>
-        <View
-          accessibilityLabel="Search Reddit, display only"
+        {/* Tapping the search box opens the full Search screen. */}
+        <Pressable
+          accessibilityRole="search"
+          accessibilityLabel="Search Summit"
+          onPress={onSearch}
           style={styles.search}
         >
           <RedditLogo />
           <Text numberOfLines={1} style={styles.placeholder}>
-            Search Reddit
+            Search Summit
           </Text>
-        </View>
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Create post"

@@ -46,6 +46,8 @@ const paths = {
     'M9 4H3v16h6M8 12h13m-4-4 4 4-4 4',
 
   send: 'm12 4-7 7M12 4l7 7M12 4v16',
+
+  search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm5 12 5 5',
 } as const;
 
 export type PostIconName =
