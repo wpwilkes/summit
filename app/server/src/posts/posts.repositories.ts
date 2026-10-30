@@ -9,11 +9,18 @@ function _normalizeVote(value: number | undefined): PostVoteValue {
   return 0;
 }
 
+const postRelations = {
+  author: { select: { username: true } },
+  community: { select: { name: true } },
+  _count: { select: { comments: { where: { deletedAt: null } } } },
+} as const;
+
 export async function createPost(
   title: string,
   body: string,
   authorId: number,
   communityId: number,
+  image?: { photoUrl?: string; photoWidth?: number; photoHeight?: number },
 ) {
   return prismaClient.post.create({
     data: {
@@ -21,19 +28,23 @@ export async function createPost(
       body,
       authorId,
       communityId,
+      ...image,
     },
+    include: postRelations,
   });
 }
 
 export async function getAllPosts() {
   return prismaClient.post.findMany({
-    orderBy: [{ createdAt: 'desc' }],
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    include: postRelations,
   });
 }
 
 export async function getByIdPost(id: number) {
   return prismaClient.post.findUnique({
     where: { id },
+    include: postRelations,
   });
 }
 
@@ -58,11 +69,16 @@ export async function updatePost(
   data: {
     title?: string;
     body?: string;
+    communityId?: number;
+    photoUrl?: string | null;
+    photoWidth?: number | null;
+    photoHeight?: number | null;
   },
 ) {
   return prismaClient.post.update({
     where: { id },
     data,
+    include: postRelations,
   });
 }
 

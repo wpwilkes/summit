@@ -47,7 +47,11 @@ services:
       db:
         condition: service_healthy
 
+    volumes:
+      - summit_post_images:/app/server/uploads
+
     stop_grace_period: 10s
 
 volumes:
+  summit_post_images:
   summit_postgres_data:

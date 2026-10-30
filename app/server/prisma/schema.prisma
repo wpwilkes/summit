@@ -32,6 +32,9 @@ model Post {
   title       String
   body        String
   vote        Int      @default(0)
+  photoUrl    String?  @map("photo_url")
+  photoWidth  Int?     @map("photo_width")
+  photoHeight Int?     @map("photo_height")
   createdAt   DateTime @default(now()) @map("created_at")
 
   author    User      @relation(fields: [authorId], references: [id])

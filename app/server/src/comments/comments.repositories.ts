@@ -18,6 +18,8 @@ function _normalizeCommentVote(value: number | undefined): CommentVoteValue {
   return 0;
 }
 
+const commentAuthor = { author: { select: { username: true } } } as const;
+
 export async function createComment(
   postId: number,
   authorId: number,
@@ -31,12 +33,14 @@ export async function createComment(
       body,
       parentId,
     },
+    include: commentAuthor,
   });
 }
 
 export async function getCommentById(id: number) {
   return prismaClient.comment.findUnique({
     where: { id },
+    include: commentAuthor,
   });
 }
 
@@ -44,6 +48,7 @@ export async function getCommentsByPostId(postId: number) {
   return prismaClient.comment.findMany({
     where: { postId },
     orderBy: [{ createdAt: 'asc' }],
+    include: commentAuthor,
   });
 }
 
@@ -73,6 +78,7 @@ export async function updateCommentById(id: number, body: string) {
   return prismaClient.comment.update({
     where: { id },
     data: { body },
+    include: commentAuthor,
   });
 }
 
@@ -82,6 +88,7 @@ export async function removeCommentById(id: number) {
     data: {
       deletedAt: new Date(),
     },
+    include: commentAuthor,
   });
 }
 

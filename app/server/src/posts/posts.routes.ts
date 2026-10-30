@@ -10,8 +10,10 @@ import {
 } from './posts.controllers.js';
 import { POSTS_CONTRACTS } from '@summit/shared';
 import { Router } from 'express';
+import imagesRouter from './posts.images.js';
 
 const postsRouter: Router = Router();
+postsRouter.use(imagesRouter);
 
 postsRouter.post(
   POSTS_CONTRACTS.create.path,

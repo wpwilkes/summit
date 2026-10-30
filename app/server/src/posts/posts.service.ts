@@ -45,6 +45,7 @@ export async function createPostService(
     data.body,
     userId,
     data.communityId,
+    { photoUrl: data.photoUrl, photoWidth: data.photoWidth, photoHeight: data.photoHeight },
   );
   return {
     post: toPostContract(post),
@@ -106,6 +107,10 @@ export async function updatePostService(
       'FORBIDDEN',
       "You cannot edit another user's post.",
     );
+  }
+  if (data.communityId !== undefined) {
+    const community = await getCommunityById(data.communityId);
+    if (!community) throw new AppError(404, 'COMMUNITY_NOT_FOUND', 'Community not found.');
   }
   const updatedPost = await updatePost(id, data);
   return {

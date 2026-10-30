@@ -1,3 +1,4 @@
+
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import PostIcon, { RedditLogo } from './PostIcon';
 import { colors, ui } from './postsTheme';
@@ -5,10 +6,12 @@ import { colors, ui } from './postsTheme';
 export default function PostsHeader({
   onMenu,
   onCreate,
+  onSearch,
   disabled = false,
 }: {
   onMenu: () => void;
   onCreate: () => void;
+  onSearch: () => void;
   disabled?: boolean;
 }) {
   return (
@@ -22,15 +25,19 @@ export default function PostsHeader({
         >
           <PostIcon name="menu" />
         </Pressable>
-        <View
-          accessibilityLabel="Search Reddit, display only"
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Search Reddit"
+          onPress={onSearch}
           style={styles.search}
         >
           <RedditLogo />
           <Text numberOfLines={1} style={styles.placeholder}>
             Search Reddit
           </Text>
-        </View>
+        </Pressable>
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Create post"

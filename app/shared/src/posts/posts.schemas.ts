@@ -4,7 +4,13 @@ export const PostSchema = z.object({
   id: z.int().positive(),
   communityId: z.int().positive(),
   title: z.string().nonempty(),
-  body: z.string().nonempty(),
+  body: z.string(),
+  photoUrl: z.string().regex(/^\/api\/posts\/images\/[0-9a-f-]+\.(jpg|png|webp)$/).optional(),
+  photoWidth: z.int().positive().optional(),
+  photoHeight: z.int().positive().optional(),
+  authorUsername: z.string().optional(),
+  communityName: z.string().optional(),
+  commentCount: z.int().nonnegative().optional(),
   authorId: z.int().positive(),
   votes: z.int(),
   createdAt: z.iso.datetime(),
@@ -19,7 +25,12 @@ export type PostIdParams = z.infer<typeof PostIdParamsSchema>;
 export const CreatePostRequestSchema = z.object({
   communityId: z.int().positive(),
   title: z.string().nonempty(),
-  body: z.string().nonempty(),
+  body: z.string(),
+  photoUrl: z.string().regex(/^\/api\/posts\/images\/[0-9a-f-]+\.(jpg|png|webp)$/).optional(),
+  photoWidth: z.int().positive().optional(),
+  photoHeight: z.int().positive().optional(),
+}).refine((data) => !!data.body.trim() || !!data.photoUrl, {
+  message: 'A post must contain text or a photo.',
 });
 export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;
 
@@ -76,9 +87,13 @@ export type RemovePostResponse = z.infer<typeof RemovePostResponseSchema>;
 export const UpdatePostRequestSchema = z
   .object({
     title: z.string().optional(),
+    communityId: z.int().positive().optional(),
     body: z.string().optional(),
+    photoUrl: z.string().regex(/^\/api\/posts\/images\/[0-9a-f-]+\.(jpg|png|webp)$/).nullable().optional(),
+    photoWidth: z.int().positive().nullable().optional(),
+    photoHeight: z.int().positive().nullable().optional(),
   })
-  .refine((data) => data.title !== undefined || data.body !== undefined, {
+  .refine((data) => data.title !== undefined || data.body !== undefined || data.communityId !== undefined || data.photoUrl !== undefined, {
     message: 'Provide a title or body to update.',
   });
 export type UpdatePostRequest = z.infer<typeof UpdatePostRequestSchema>;
