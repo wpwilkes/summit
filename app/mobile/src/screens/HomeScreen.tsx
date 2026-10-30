@@ -216,6 +216,11 @@ export default function HomeScreen({
           'News',
         )
       }
+      onSearchPress={() =>
+        navigation.navigate(
+          'Search',
+        )
+      }
       onDiscoverCommunitiesPress={() =>
         navigation.navigate(
           'DiscoverCommunities',

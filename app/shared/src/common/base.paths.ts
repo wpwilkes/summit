@@ -4,4 +4,5 @@ export const BASE_PATHS = {
   communities: '/api/communities',
   ping: '/api/ping',
   posts: '/api/posts',
+  search: '/api/search',
 } as const;

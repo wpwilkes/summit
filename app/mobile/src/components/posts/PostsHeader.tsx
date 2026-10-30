@@ -1,4 +1,3 @@
-
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import PostIcon, { RedditLogo } from './PostIcon';
 import { colors, ui } from './postsTheme';
@@ -25,19 +24,18 @@ export default function PostsHeader({
         >
           <PostIcon name="menu" />
         </Pressable>
-
+        {/* Tapping the search box opens the full Search screen. */}
         <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Search Reddit"
+          accessibilityRole="search"
+          accessibilityLabel="Search Summit"
           onPress={onSearch}
           style={styles.search}
         >
           <RedditLogo />
           <Text numberOfLines={1} style={styles.placeholder}>
-            Search Reddit
+            Search Summit
           </Text>
         </Pressable>
-
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Create post"
