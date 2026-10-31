@@ -40,12 +40,12 @@ import {
 } from '../services/recentCommunitiesService';
 
 import {
-  createSummitPostsService,
-  type SummitPostsService,
-} from '../services/summitPostsService';
+  createBackendSummitPostsService,
+  type BackendSummitPostsService,
+} from '../services/backendSummitPostsService';
 
 import {
-  getPostsUsername,
+  getPostsProfile,
 } from '../services/summitProfileService';
 
 type Props = {
@@ -93,7 +93,7 @@ export default function SummitPostsScreen({
     service,
     setService,
   ] =
-    useState<SummitPostsService | null>(
+    useState<BackendSummitPostsService | null>(
       null,
     );
 
@@ -106,6 +106,9 @@ export default function SummitPostsScreen({
     retry,
     setRetry,
   ] = useState(0);
+
+  const [busy, setBusy] = useState(false);
+  const [loadingFeed, setLoadingFeed] = useState(false);
 
   const [
     revision,
@@ -165,20 +168,15 @@ export default function SummitPostsScreen({
         12000,
       );
 
-    getPostsUsername(
-      controller.signal,
-    )
-      .then(
-        (username) => {
-          if (active) {
-            setService(
-              createSummitPostsService(
-                username,
-              ),
-            );
-          }
-        },
-      )
+    getPostsProfile(controller.signal)
+      .then(async (profile) => {
+        const backendService = createBackendSummitPostsService(profile);
+        await backendService.load();
+        if (active) {
+          setService(backendService);
+          setProfileError('');
+        }
+      })
       .catch(
         (cause) => {
           if (active) {
@@ -270,49 +268,64 @@ export default function SummitPostsScreen({
       });
   };
 
-  const act = (
-    action: () => void,
-  ) => {
-    if (loggingOut) {
-      return;
-    }
-
+  const loadFeed = async (current = service) => {
+    if (!current || loggingOut) return;
+    setLoadingFeed(true);
     try {
-      action();
-
+      await current.load();
+      if (selectedId) await current.loadComments(selectedId);
       refresh();
-
       setError('');
     } catch (cause) {
-      setError(
-        cause instanceof
-          Error
-          ? cause.message
-          : 'Please try again.',
-      );
+      setError(cause instanceof Error ? cause.message : 'Could not refresh posts.');
+    } finally {
+      setLoadingFeed(false);
     }
   };
 
-  const deletePost = (
-    id: string,
-  ) =>
-    act(() => {
-      service?.remove(id);
+  // Reload when opening a discussion; other users may have replied since the last visit.
+  useEffect(() => {
+    if (!service || !selectedId) return;
+    let current = true;
+    service.loadComments(selectedId)
+      .then(() => { if (current) refresh(); })
+      .catch((cause) => { if (current) setError(cause instanceof Error ? cause.message : 'Unable to load comments.'); });
+    return () => { current = false; };
+  }, [service, selectedId]);
 
-      setSelectedId(
-        null,
-      );
+  // Poll while this screen is mounted so users on other devices see new posts.
+  useEffect(() => {
+    if (!service) return;
+    const interval = setInterval(() => {
+      Promise.all([service.load(), ...(selectedId ? [service.loadComments(selectedId)] : [])])
+        .then(() => refresh())
+        .catch(() => { /* Keep last successful feed visible during transient outages. */ });
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [service, selectedId]);
 
-      setEditor(null);
-    });
+  const act = async (action: () => Promise<void>) => {
+    if (loggingOut || busy) return;
+    setBusy(true);
+    try {
+      await action();
+      refresh();
+      setError('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  const selectedPost =
-    service &&
-    selectedId
-      ? service.get(
-          selectedId,
-        )
-      : null;
+  const deletePost = (id: string) => act(async () => {
+    if (!service) return;
+    await service.remove(id);
+    setSelectedId(null);
+    setEditor(null);
+  });
+
+  const selectedPost = service && selectedId ? service.get(selectedId) : null;
 
   return (
     <SafeAreaView
@@ -353,13 +366,7 @@ export default function SummitPostsScreen({
             editor.id ??
             'new'
           }
-          initialValue={
-            editor.id
-              ? service.get(
-                  editor.id,
-                )
-              : undefined
-          }
+          initialValue={editor.id ? service.get(editor.id) : undefined}
           disabled={
             loggingOut
           }
@@ -368,20 +375,11 @@ export default function SummitPostsScreen({
               null,
             )
           }
-          onSubmit={(
-            input,
-          ) => {
-            if (
-              editor.id
-            ) {
-              service.update(
-                editor.id,
-                input,
-              );
+          onSubmit={async (input) => {
+            if (editor.id) {
+              await service.update(editor.id, input);
             } else {
-              service.create(
-                input,
-              );
+              await service.create(input);
             }
 
             if (
@@ -414,9 +412,7 @@ export default function SummitPostsScreen({
           disabled={
             loggingOut
           }
-          onChange={
-            refresh
-          }
+          onChange={refresh}
           onClose={() =>
             setSelectedId(
               null,
@@ -527,6 +523,8 @@ export default function SummitPostsScreen({
             </View>
           ) : (
             <FlatList
+              refreshing={loadingFeed}
+              onRefresh={() => { void loadFeed(); }}
               data={
                 service.list()
               }
@@ -588,7 +586,7 @@ export default function SummitPostsScreen({
                     item
                   }
                   disabled={
-                    loggingOut
+                    loggingOut || busy
                   }
                   onOpen={() =>
                     setSelectedId(
@@ -612,11 +610,8 @@ export default function SummitPostsScreen({
                   onVote={(
                     value,
                   ) =>
-                    act(() => {
-                      service.vote(
-                        item.id,
-                        value,
-                      );
+                    act(async () => {
+                      await service.vote(item.id, value);
                     })
                   }
                 />

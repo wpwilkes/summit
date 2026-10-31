@@ -1,4 +1,5 @@
 import {
+  type ComponentRef,
   forwardRef,
   useState,
 } from 'react';
@@ -18,7 +19,7 @@ type Props = TextInputProps & {
 };
 
 const PasswordInput = forwardRef<
-  TextInput,
+  ComponentRef<typeof TextInput>,
   Props
 >(
   (

@@ -36,6 +36,15 @@ export async function getCommunityPosts(communityId: number) {
   return prismaClient.post.findMany({
     where: { communityId: communityId },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    include: {
+      author: { select: { username: true } },
+      community: { select: { name: true } },
+      _count: {
+        select: {
+          comments: { where: { deletedAt: null } },
+        },
+      },
+    },
   });
 }
 

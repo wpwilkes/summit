@@ -35,7 +35,7 @@ export default function SummitPostCard({
             <Text style={styles.time}>{relativeTime(post.createdAt)}</Text>
           </View>
           <Text numberOfLines={1} style={styles.username}>
-            {post.author.replace(/^u\//i, '')}
+            {(typeof post.author === 'string' ? post.author : '').replace(/^u\//i, '') || 'Unknown user'}
           </Text>
         </View>
         <Pressable
@@ -78,7 +78,7 @@ export default function SummitPostCard({
               {
                 aspectRatio: Math.min(
                   1.8,
-                  Math.max(0.65, post.photo.width / post.photo.height),
+                  Math.max(0.65, (post.photo.width || 1) / (post.photo.height || 1)),
                 ),
               },
             ]}

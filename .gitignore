@@ -58,3 +58,6 @@ Desktop.ini
 *.sln
 *.swp
 *.swo
+
+# Local post image uploads
+app/server/uploads/

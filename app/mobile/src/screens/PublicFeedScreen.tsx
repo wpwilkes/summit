@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { type ComponentRef, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -53,7 +53,7 @@ export default function PublicFeedScreen({
   const [isGuestModalVisible, setIsGuestModalVisible] =
     useState(false);
 
-  const searchInputRef = useRef<TextInput>(null);
+  const searchInputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   const dismissSearchFocus = () => {
     searchInputRef.current?.blur();
