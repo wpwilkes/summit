@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,11 +13,21 @@ import {
 } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import {
+  SafeAreaView,
+} from 'react-native-safe-area-context';
+
+import type {
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
+
+import type {
+  Community,
+} from '@summit/shared';
 
 import CommunityCard from '../components/communities/CommunityCard';
+
 import PostIcon from '../components/posts/PostIcon';
 
 import {
@@ -21,330 +35,255 @@ import {
   ui,
 } from '../components/posts/postsTheme';
 
-import type { RootStackParamList } from '../types/navigation.types';
+import {
+  getCommunities,
+  getJoinedCommunities,
+  joinCommunity,
+  leaveCommunity,
+} from '../services/communityService';
 
-type Props = NativeStackScreenProps<
+import type {
   RootStackParamList,
-  'TopicCommunities'
->;
+} from '../types/navigation.types';
 
-type Community = {
-  id: string;
-  name: string;
-  description: string;
-  memberCount: string;
-};
+type Props =
+  NativeStackScreenProps<
+    RootStackParamList,
+    'TopicCommunities'
+  >;
 
-type TopicData = {
-  subtopics: string[];
-  communities: Community[];
-};
-
-const topicData: Record<
+const TOPIC_SUBTOPICS: Record<
   string,
-  TopicData
+  string[]
 > = {
-  'Internet Culture': {
-    subtopics: [
-      'Amazing',
-      'Memes',
-      'Funny',
-      'Social Media',
-    ],
+  'Internet Culture': [
+    'Memes',
+    'Social Media',
+    'Online Communities',
+    'Creators',
+  ],
 
-    communities: [
-      {
-        id: 'interesting',
-        name: 'interesting',
-        memberCount:
-          '720K members',
-        description:
-          'Interesting things from around the internet.',
-      },
-      {
-        id: 'memes',
-        name: 'memes',
-        memberCount:
-          '1.8M members',
-        description:
-          'Memes, jokes, and internet culture.',
-      },
-      {
-        id: 'funny',
-        name: 'funny',
-        memberCount:
-          '2.4M members',
-        description:
-          'Funny posts, videos, and conversations.',
-      },
-    ],
-  },
+  Games: [
+    'PC Gaming',
+    'Console Gaming',
+    'Mobile Gaming',
+    'Esports',
+  ],
 
-  Games: {
-    subtopics: [
-      'PC Gaming',
-      'Console',
-      'Mobile',
-      'Esports',
-    ],
+  'Q&As': [
+    'General Q&A',
+    'Advice',
+    'Ask Me Anything',
+    'Learning',
+  ],
 
-    communities: [
-      {
-        id: 'gaming',
-        name: 'gaming',
-        memberCount:
-          '2.1M members',
-        description:
-          'General discussion about games and gaming.',
-      },
-      {
-        id: 'pcgaming',
-        name: 'pcgaming',
-        memberCount:
-          '950K members',
-        description:
-          'PC games, hardware, releases, and discussion.',
-      },
-      {
-        id: 'esports',
-        name: 'esports',
-        memberCount:
-          '610K members',
-        description:
-          'Competitive gaming, tournaments, and esports news.',
-      },
-    ],
-  },
+  Technology: [
+    'Programming',
+    'AI',
+    'Hardware',
+    'Mobile',
+  ],
 
-  'Q&As': {
-    subtopics: [
-      'Ask Anything',
-      'Advice',
-      'Experts',
-    ],
+  'Pop Culture': [
+    'Celebrities',
+    'Music',
+    'Trends',
+    'Entertainment',
+  ],
 
-    communities: [
-      {
-        id: 'ask',
-        name: 'ask',
-        memberCount:
-          '890K members',
-        description:
-          'Ask questions and get answers from the community.',
-      },
-      {
-        id: 'advice',
-        name: 'advice',
-        memberCount:
-          '540K members',
-        description:
-          'A place to ask for general advice.',
-      },
-    ],
-  },
+  'Movies & TV': [
+    'Movies',
+    'Television',
+    'Streaming',
+    'Reviews',
+  ],
 
-  Technology: {
-    subtopics: [
-      'Programming',
-      'AI',
-      'Hardware',
-      'Mobile',
-    ],
+  Education: [
+    'College',
+    'Study Help',
+    'Careers',
+    'Online Learning',
+  ],
 
-    communities: [
-      {
-        id: 'technology',
-        name: 'technology',
-        memberCount:
-          '1.2M members',
-        description:
-          'Technology news, devices, software, and discussion.',
-      },
-      {
-        id: 'programming',
-        name: 'programming',
-        memberCount:
-          '842K members',
-        description:
-          'Programming questions, projects, and resources.',
-      },
-      {
-        id: 'artificialintelligence',
-        name: 'artificialintelligence',
-        memberCount:
-          '630K members',
-        description:
-          'Artificial intelligence news and discussion.',
-      },
-    ],
-  },
-
-  'Pop Culture': {
-    subtopics: [
-      'Celebrities',
-      'Music',
-      'Trending',
-    ],
-
-    communities: [
-      {
-        id: 'popculture',
-        name: 'popculture',
-        memberCount:
-          '670K members',
-        description:
-          'Entertainment, celebrities, trends, and culture.',
-      },
-      {
-        id: 'music',
-        name: 'music',
-        memberCount:
-          '1.1M members',
-        description:
-          'Music discussion, artists, albums, and songs.',
-      },
-    ],
-  },
-
-  'Movies & TV': {
-    subtopics: [
-      'Movies',
-      'Television',
-      'Streaming',
-    ],
-
-    communities: [
-      {
-        id: 'movies',
-        name: 'movies',
-        memberCount:
-          '980K members',
-        description:
-          'Movies, trailers, reviews, and upcoming releases.',
-      },
-      {
-        id: 'television',
-        name: 'television',
-        memberCount:
-          '760K members',
-        description:
-          'Television shows, series, episodes, and discussion.',
-      },
-    ],
-  },
-
-  Education: {
-    subtopics: [
-      'Students',
-      'Learning',
-      'College',
-      'Teachers',
-    ],
-
-    communities: [
-      {
-        id: 'education',
-        name: 'education',
-        memberCount:
-          '430K members',
-        description:
-          'Education, schools, learning, and teaching.',
-      },
-      {
-        id: 'college',
-        name: 'college',
-        memberCount:
-          '590K members',
-        description:
-          'College life, classes, studying, and student questions.',
-      },
-    ],
-  },
-
-  Science: {
-    subtopics: [
-      'Space',
-      'Biology',
-      'Physics',
-      'Environment',
-    ],
-
-    communities: [
-      {
-        id: 'science',
-        name: 'science',
-        memberCount:
-          '1.4M members',
-        description:
-          'Science research, discoveries, and discussion.',
-      },
-      {
-        id: 'space',
-        name: 'space',
-        memberCount:
-          '850K members',
-        description:
-          'Space exploration, astronomy, planets, and missions.',
-      },
-      {
-        id: 'physics',
-        name: 'physics',
-        memberCount:
-          '410K members',
-        description:
-          'Physics questions, research, and discussion.',
-      },
-    ],
-  },
+  Science: [
+    'Space',
+    'Biology',
+    'Physics',
+    'Environment',
+  ],
 };
 
 export default function TopicCommunitiesScreen({
   navigation,
   route,
 }: Props) {
-  const { topic } =
-    route.params;
+  const {
+    topic,
+  } = route.params;
+
+  const [
+    communities,
+    setCommunities,
+  ] = useState<Community[]>([]);
 
   const [
     joinedCommunityIds,
     setJoinedCommunityIds,
-  ] = useState<string[]>([]);
+  ] = useState<number[]>([]);
 
-  const data =
-    topicData[topic] ?? {
-      subtopics: [],
-      communities: [],
-    };
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const toggleJoin = (
-    communityId: string,
-  ) => {
-    setJoinedCommunityIds(
-      (current) => {
-        if (
-          current.includes(
-            communityId,
-          )
-        ) {
-          return current.filter(
-            (id) =>
-              id !== communityId,
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState('');
+
+  const [
+    joinErrorMessage,
+    setJoinErrorMessage,
+  ] = useState('');
+
+  const subtopics =
+    TOPIC_SUBTOPICS[
+      topic
+    ] ?? [];
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCommunities =
+      async () => {
+        setLoading(true);
+        setErrorMessage('');
+        setJoinErrorMessage('');
+
+        const result =
+          await getCommunities();
+
+        if (!active) {
+          return;
+        }
+
+        if (!result.success) {
+          setCommunities([]);
+          setErrorMessage(
+            result.message,
+          );
+          setLoading(false);
+          return;
+        }
+
+        /*
+         * Only show communities
+         * belonging to this topic.
+         */
+        const topicCommunities =
+          result.communities.filter(
+            (community) =>
+              community.topic ===
+              topic,
+          );
+
+        setCommunities(
+          topicCommunities,
+        );
+
+        const joinedResult =
+          await getJoinedCommunities();
+
+        if (!active) {
+          return;
+        }
+
+        if (joinedResult.success) {
+          setJoinedCommunityIds(
+            joinedResult.communities.map(
+              (community) =>
+                community.id,
+            ),
+          );
+        } else {
+          setJoinedCommunityIds([]);
+          setJoinErrorMessage(
+            joinedResult.message,
           );
         }
 
-        return [
-          ...current,
-          communityId,
-        ];
-      },
-    );
+        setLoading(false);
+      };
+
+    loadCommunities();
+
+    return () => {
+      active = false;
+    };
+  }, [topic]);
+
+  const toggleJoin = async (
+    community: Community,
+  ) => {
+    setJoinErrorMessage('');
+
+    const isJoined =
+      joinedCommunityIds.includes(
+        community.id,
+      );
+
+    const result = isJoined
+      ? await leaveCommunity(
+          community.name,
+        )
+      : await joinCommunity(
+          community.name,
+        );
+
+    if (!result.success) {
+      setJoinErrorMessage(
+        result.message,
+      );
+      return;
+    }
+
+    if (result.joined) {
+      setJoinedCommunityIds(
+        (current) => {
+          if (
+            current.includes(
+              community.id,
+            )
+          ) {
+            return current;
+          }
+
+          return [
+            ...current,
+            community.id,
+          ];
+        },
+      );
+    } else {
+      setJoinedCommunityIds(
+        (current) =>
+          current.filter(
+            (id) =>
+              id !== community.id,
+          ),
+      );
+    }
   };
 
   return (
-    <SafeAreaView style={ui.page}>
+    <SafeAreaView
+      style={ui.page}
+    >
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
+      <View
+        style={styles.header}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
@@ -353,10 +292,16 @@ export default function TopicCommunitiesScreen({
           }
           style={ui.iconButton}
         >
-          <PostIcon name="back" />
+          <PostIcon
+            name="back"
+          />
         </Pressable>
 
-        <Text style={styles.headerTitle}>
+        <Text
+          style={
+            styles.headerTitle
+          }
+        >
           {topic}
         </Text>
       </View>
@@ -369,11 +314,26 @@ export default function TopicCommunitiesScreen({
           styles.content
         }
       >
-        <Text style={styles.sectionTitle}>
+        <Text
+          style={
+            styles.sectionTitle
+          }
+        >
           Explore {topic}
         </Text>
 
-        {data.subtopics.length > 0 ? (
+        <Text
+          style={
+            styles.sectionDescription
+          }
+        >
+          Choose a subtopic or
+          explore communities in
+          this topic.
+        </Text>
+
+        {subtopics.length >
+        0 ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={
@@ -383,10 +343,12 @@ export default function TopicCommunitiesScreen({
               styles.subtopicRow
             }
           >
-            {data.subtopics.map(
+            {subtopics.map(
               (subtopic) => (
                 <Pressable
-                  key={subtopic}
+                  key={
+                    subtopic
+                  }
                   accessibilityRole="button"
                   accessibilityLabel={`Open ${subtopic} communities`}
                   onPress={() =>
@@ -402,6 +364,7 @@ export default function TopicCommunitiesScreen({
                     pressed,
                   }) => [
                     styles.subtopicChip,
+
                     pressed &&
                       styles.pressed,
                   ]}
@@ -428,13 +391,55 @@ export default function TopicCommunitiesScreen({
           Communities
         </Text>
 
-        {data.communities.length > 0 ? (
+        {joinErrorMessage ? (
+          <Text
+            style={
+              styles.joinErrorText
+            }
+          >
+            {joinErrorMessage}
+          </Text>
+        ) : null}
+
+        {loading ? (
+          <View
+            style={
+              styles.statusContainer
+            }
+          >
+            <ActivityIndicator
+              size="large"
+              color="#ff4500"
+            />
+
+            <Text
+              style={ui.muted}
+            >
+              Loading communities...
+            </Text>
+          </View>
+        ) : errorMessage ? (
+          <View
+            style={
+              styles.statusContainer
+            }
+          >
+            <Text
+              style={
+                styles.errorText
+              }
+            >
+              {errorMessage}
+            </Text>
+          </View>
+        ) : communities.length >
+          0 ? (
           <View
             style={
               styles.communityList
             }
           >
-            {data.communities.map(
+            {communities.map(
               (community) => (
                 <CommunityCard
                   key={
@@ -446,9 +451,11 @@ export default function TopicCommunitiesScreen({
                   description={
                     community.description
                   }
-                  memberCount={
-                    community.memberCount
-                  }
+                  memberCount={`${community.memberCount} ${
+                    community.memberCount === 1
+                      ? 'member'
+                      : 'members'
+                  }`}
                   joined={joinedCommunityIds.includes(
                     community.id,
                   )}
@@ -457,7 +464,9 @@ export default function TopicCommunitiesScreen({
                       'Community',
                       {
                         communityId:
-                          community.id,
+                          String(
+                            community.id,
+                          ),
 
                         communityName:
                           community.name,
@@ -466,7 +475,7 @@ export default function TopicCommunitiesScreen({
                   }
                   onJoinPress={() =>
                     toggleJoin(
-                      community.id,
+                      community,
                     )
                   }
                 />
@@ -474,10 +483,17 @@ export default function TopicCommunitiesScreen({
             )}
           </View>
         ) : (
-          <View style={styles.empty}>
-            <Text style={ui.muted}>
-              No communities available
-              for this topic yet.
+          <View
+            style={
+              styles.empty
+            }
+          >
+            <Text
+              style={ui.muted}
+            >
+              No communities are
+              available for this
+              topic yet.
             </Text>
           </View>
         )}
@@ -486,76 +502,127 @@ export default function TopicCommunitiesScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    minHeight: 58,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor:
-      colors.border,
-    backgroundColor:
-      colors.background,
-  },
+const styles =
+  StyleSheet.create({
+    header: {
+      minHeight: 58,
+      flexDirection:
+        'row',
+      alignItems:
+        'center',
+      gap: 10,
+      paddingHorizontal:
+        12,
+      borderBottomWidth:
+        1,
+      borderBottomColor:
+        colors.border,
+      backgroundColor:
+        colors.background,
+    },
 
-  headerTitle: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '700',
-  },
+    headerTitle: {
+      flex: 1,
+      color:
+        colors.text,
+      fontSize: 19,
+      fontWeight:
+        '700',
+    },
 
-  content: {
-    paddingBottom: 40,
-  },
+    content: {
+      padding: 18,
+      paddingBottom: 40,
+    },
 
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '700',
-    paddingHorizontal: 16,
-    marginTop: 22,
-  },
+    sectionTitle: {
+      color:
+        colors.text,
+      fontSize: 21,
+      fontWeight:
+        '700',
+    },
 
-  subtopicRow: {
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-  },
+    sectionDescription: {
+      marginTop: 6,
+      color:
+        colors.muted,
+      fontSize: 14,
+      lineHeight: 20,
+    },
 
-  subtopicChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor:
-      colors.border,
-    backgroundColor: '#fff',
-  },
+    subtopicRow: {
+      gap: 8,
+      paddingTop: 16,
+      paddingBottom: 4,
+    },
 
-  subtopicText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '500',
-  },
+    subtopicChip: {
+      minHeight: 38,
+      justifyContent:
+        'center',
+      paddingHorizontal:
+        15,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius: 20,
+      backgroundColor:
+        '#fff',
+    },
 
-  communityTitle: {
-    marginTop: 30,
-  },
+    subtopicText: {
+      color:
+        colors.text,
+      fontSize: 14,
+      fontWeight:
+        '600',
+    },
 
-  communityList: {
-    paddingHorizontal: 16,
-    marginTop: 8,
-  },
+    communityTitle: {
+      marginTop: 28,
+      marginBottom: 12,
+    },
 
-  empty: {
-    paddingHorizontal: 16,
-    paddingVertical: 30,
-  },
+    communityList: {
+      gap: 12,
+    },
 
-  pressed: {
-    opacity: 0.7,
-  },
-});
+    statusContainer: {
+      minHeight: 180,
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+      gap: 12,
+    },
+
+    errorText: {
+      color:
+        '#c62828',
+      fontSize: 14,
+      textAlign:
+        'center',
+    },
+
+    joinErrorText: {
+      color:
+        '#c62828',
+      fontSize: 14,
+      marginBottom: 12,
+    },
+
+    empty: {
+      minHeight: 160,
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+      paddingHorizontal:
+        20,
+    },
+
+    pressed: {
+      opacity: 0.7,
+    },
+  });

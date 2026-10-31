@@ -1,4 +1,9 @@
 import {
+  useEffect,
+  useState,
+} from 'react';
+
+import {
   Modal,
   Pressable,
   ScrollView,
@@ -11,9 +16,29 @@ import {
   SafeAreaView,
 } from 'react-native-safe-area-context';
 
+import {
+  useNavigation,
+} from '@react-navigation/native';
+
+import type {
+  NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
+
+import type {
+  Community,
+} from '@summit/shared';
+
+import {
+  getJoinedCommunities,
+} from '../../services/communityService';
+
 import type {
   RecentCommunity,
 } from '../../services/recentCommunitiesService';
+
+import type {
+  RootStackParamList,
+} from '../../types/navigation.types';
 
 import PostIcon from './PostIcon';
 
@@ -46,6 +71,11 @@ type Props = {
   loggingOut: boolean;
 };
 
+type Navigation =
+  NativeStackNavigationProp<
+    RootStackParamList
+  >;
+
 export default function PostsSidebar({
   visible,
   onClose,
@@ -58,6 +88,95 @@ export default function PostsSidebar({
   onLogout,
   loggingOut,
 }: Props) {
+  const navigation =
+    useNavigation<Navigation>();
+
+  const [
+    joinedCommunities,
+    setJoinedCommunities,
+  ] = useState<Community[]>([]);
+
+  const [
+    loadingJoinedCommunities,
+    setLoadingJoinedCommunities,
+  ] = useState(false);
+
+  const [
+    joinedCommunitiesError,
+    setJoinedCommunitiesError,
+  ] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    const loadJoinedCommunities =
+      async () => {
+        if (!visible) {
+          return;
+        }
+
+        setLoadingJoinedCommunities(
+          true,
+        );
+
+        setJoinedCommunitiesError('');
+
+        const result =
+          await getJoinedCommunities();
+
+        if (!active) {
+          return;
+        }
+
+        if (!result.success) {
+          setJoinedCommunities([]);
+
+          setJoinedCommunitiesError(
+            result.message,
+          );
+
+          setLoadingJoinedCommunities(
+            false,
+          );
+
+          return;
+        }
+
+        setJoinedCommunities(
+          result.communities,
+        );
+
+        setLoadingJoinedCommunities(
+          false,
+        );
+      };
+
+    loadJoinedCommunities();
+
+    return () => {
+      active = false;
+    };
+  }, [visible]);
+
+  const openJoinedCommunity = (
+    community: Community,
+  ) => {
+    onClose();
+
+    navigation.navigate(
+      'Community',
+      {
+        communityId:
+          String(
+            community.id,
+          ),
+
+        communityName:
+          community.name,
+      },
+    );
+  };
+
   return (
     <Modal
       visible={visible}
@@ -259,14 +378,83 @@ export default function PostsSidebar({
               </Text>
             </View>
 
-            <Text
-              style={
-                styles.emptySection
-              }
-            >
-              No communities joined
-              yet.
-            </Text>
+            {loadingJoinedCommunities ? (
+              <Text
+                style={
+                  styles.emptySection
+                }
+              >
+                Loading communities...
+              </Text>
+            ) : joinedCommunitiesError ? (
+              <Text
+                style={
+                  styles.errorSection
+                }
+              >
+                {
+                  joinedCommunitiesError
+                }
+              </Text>
+            ) : joinedCommunities.length >
+              0 ? (
+              joinedCommunities.map(
+                (community) => (
+                  <Pressable
+                    key={
+                      community.id
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${community.name}`}
+                    disabled={
+                      loggingOut
+                    }
+                    onPress={() =>
+                      openJoinedCommunity(
+                        community,
+                      )
+                    }
+                    style={
+                      styles.communityItem
+                    }
+                  >
+                    <View
+                      style={
+                        styles.communityAvatar
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.communityAvatarText
+                        }
+                      >
+                        {community.name
+                          .charAt(0)
+                          .toUpperCase()}
+                      </Text>
+                    </View>
+
+                    <Text
+                      numberOfLines={1}
+                      style={
+                        styles.communityName
+                      }
+                    >
+                      s/{community.name}
+                    </Text>
+                  </Pressable>
+                ),
+              )
+            ) : (
+              <Text
+                style={
+                  styles.emptySection
+                }
+              >
+                No communities joined
+                yet.
+              </Text>
+            )}
 
             <View
               style={ui.separator}
@@ -382,6 +570,14 @@ const styles = StyleSheet.create({
 
   emptySection: {
     color: colors.muted,
+    fontSize: 14,
+    paddingHorizontal: 22,
+    paddingTop: 4,
+    paddingBottom: 18,
+  },
+
+  errorSection: {
+    color: '#c62828',
     fontSize: 14,
     paddingHorizontal: 22,
     paddingTop: 4,

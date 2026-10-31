@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +22,10 @@ import type {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 
+import type {
+  Community,
+} from '@summit/shared';
+
 import CommunityCard from '../components/communities/CommunityCard';
 import PostIcon from '../components/posts/PostIcon';
 
@@ -25,6 +33,13 @@ import {
   colors,
   ui,
 } from '../components/posts/postsTheme';
+
+import {
+  getCommunities,
+  getJoinedCommunities,
+  joinCommunity,
+  leaveCommunity,
+} from '../services/communityService';
 
 import type {
   RootStackParamList,
@@ -35,13 +50,6 @@ type Props =
     RootStackParamList,
     'DiscoverCommunities'
   >;
-
-type Community = {
-  id: string;
-  name: string;
-  description: string;
-  memberCount: string;
-};
 
 const topics = [
   'Internet Culture',
@@ -54,84 +62,145 @@ const topics = [
   'Science',
 ];
 
-const recommendedCommunities:
-  Community[] = [
-  {
-    id: 'technology',
-    name: 'technology',
-    memberCount:
-      '1.2M members',
-    description:
-      'News and discussion about technology, devices, software, and the digital world.',
-  },
-
-  {
-    id: 'programming',
-    name: 'programming',
-    memberCount:
-      '842K members',
-    description:
-      'A community for programming discussions, projects, questions, and useful resources.',
-  },
-
-  {
-    id: 'gaming',
-    name: 'gaming',
-    memberCount:
-      '2.1M members',
-    description:
-      'Talk about games, consoles, releases, gaming news, and the games you enjoy.',
-  },
-
-  {
-    id: 'movies',
-    name: 'movies',
-    memberCount:
-      '980K members',
-    description:
-      'Discuss movies, trailers, reviews, actors, directors, and upcoming releases.',
-  },
-
-  {
-    id: 'science',
-    name: 'science',
-    memberCount:
-      '1.4M members',
-    description:
-      'Share and discuss science news, research, discoveries, and interesting questions.',
-  },
-];
-
 export default function DiscoverCommunitiesScreen({
   navigation,
 }: Props) {
   const [
+    communities,
+    setCommunities,
+  ] = useState<Community[]>([]);
+
+  const [
     joinedCommunityIds,
     setJoinedCommunityIds,
-  ] = useState<string[]>([]);
+  ] = useState<number[]>([]);
 
-  const toggleJoin = (
-    communityId: string,
-  ) => {
-    setJoinedCommunityIds(
-      (current) => {
-        if (
-          current.includes(
-            communityId,
-          )
-        ) {
-          return current.filter(
-            (id) =>
-              id !== communityId,
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState('');
+
+  const [
+    joinErrorMessage,
+    setJoinErrorMessage,
+  ] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCommunities =
+      async () => {
+        setLoading(true);
+        setErrorMessage('');
+        setJoinErrorMessage('');
+
+        const communitiesResult =
+          await getCommunities();
+
+        if (!active) {
+          return;
+        }
+
+        if (!communitiesResult.success) {
+          setCommunities([]);
+          setErrorMessage(
+            communitiesResult.message,
+          );
+          setLoading(false);
+          return;
+        }
+
+        setCommunities(
+          communitiesResult.communities,
+        );
+
+        const joinedResult =
+          await getJoinedCommunities();
+
+        if (!active) {
+          return;
+        }
+
+        if (joinedResult.success) {
+          setJoinedCommunityIds(
+            joinedResult.communities.map(
+              (community) =>
+                community.id,
+            ),
+          );
+        } else {
+          setJoinedCommunityIds([]);
+          setJoinErrorMessage(
+            joinedResult.message,
           );
         }
 
-        return [
-          ...current,
-          communityId,
-        ];
-      },
-    );
+        setLoading(false);
+      };
+
+    loadCommunities();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggleJoin = async (
+    community: Community,
+  ) => {
+    setJoinErrorMessage('');
+
+    const isJoined =
+      joinedCommunityIds.includes(
+        community.id,
+      );
+
+    const result = isJoined
+      ? await leaveCommunity(
+          community.name,
+        )
+      : await joinCommunity(
+          community.name,
+        );
+
+    if (!result.success) {
+      setJoinErrorMessage(
+        result.message,
+      );
+      return;
+    }
+
+    if (result.joined) {
+      setJoinedCommunityIds(
+        (current) => {
+          if (
+            current.includes(
+              community.id,
+            )
+          ) {
+            return current;
+          }
+
+          return [
+            ...current,
+            community.id,
+          ];
+        },
+      );
+    } else {
+      setJoinedCommunityIds(
+        (current) =>
+          current.filter(
+            (id) =>
+              id !== community.id,
+          ),
+      );
+    }
   };
 
   return (
@@ -220,7 +289,7 @@ export default function DiscoverCommunitiesScreen({
               styles.sectionTitle
             }
           >
-            Recommended for you
+            Communities
           </Text>
 
           <Text
@@ -228,55 +297,120 @@ export default function DiscoverCommunitiesScreen({
               styles.sectionDescription
             }
           >
-            Communities you may
-            want to explore.
+            Explore communities
+            available on Summit.
           </Text>
         </View>
 
-        <View
-          style={
-            styles.communityList
-          }
-        >
-          {recommendedCommunities.map(
-            (community) => (
-              <CommunityCard
-                key={
-                  community.id
-                }
-                name={
-                  community.name
-                }
-                description={
-                  community.description
-                }
-                memberCount={
-                  community.memberCount
-                }
-                joined={joinedCommunityIds.includes(
-                  community.id,
-                )}
-                onPress={() =>
-                  navigation.navigate(
-                    'Community',
-                    {
-                      communityId:
-                        community.id,
+        {joinErrorMessage ? (
+          <Text
+            style={
+              styles.joinErrorText
+            }
+          >
+            {joinErrorMessage}
+          </Text>
+        ) : null}
 
-                      communityName:
-                        community.name,
-                    },
-                  )
-                }
-                onJoinPress={() =>
-                  toggleJoin(
+        {loading ? (
+          <View
+            style={
+              styles.statusContainer
+            }
+          >
+            <ActivityIndicator
+              size="large"
+              color="#ff4500"
+            />
+
+            <Text
+              style={
+                styles.statusText
+              }
+            >
+              Loading communities...
+            </Text>
+          </View>
+        ) : errorMessage ? (
+          <View
+            style={
+              styles.statusContainer
+            }
+          >
+            <Text
+              style={
+                styles.errorText
+              }
+            >
+              {errorMessage}
+            </Text>
+          </View>
+        ) : communities.length ===
+          0 ? (
+          <View
+            style={
+              styles.statusContainer
+            }
+          >
+            <Text
+              style={
+                styles.statusText
+              }
+            >
+              No communities are
+              available yet.
+            </Text>
+          </View>
+        ) : (
+          <View
+            style={
+              styles.communityList
+            }
+          >
+            {communities.map(
+              (community) => (
+                <CommunityCard
+                  key={
+                    community.id
+                  }
+                  name={
+                    community.name
+                  }
+                  description={
+                    community.description
+                  }
+                  memberCount={`${community.memberCount} ${
+                    community.memberCount === 1
+                      ? 'member'
+                      : 'members'
+                  }`}
+                  joined={joinedCommunityIds.includes(
                     community.id,
-                  )
-                }
-              />
-            ),
-          )}
-        </View>
+                  )}
+                  onPress={() =>
+                    navigation.navigate(
+                      'Community',
+                      {
+                        communityId:
+                          String(
+                            community.id,
+                          ),
+
+                        communityName:
+                          community.name,
+                      },
+                    )
+                  }
+                  onJoinPress={() =>
+                    toggleJoin(
+                      community,
+                    )
+                  }
+                />
+              ),
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -351,6 +485,33 @@ const styles =
 
     communityList: {
       marginTop: 8,
+      paddingHorizontal: 16,
+    },
+
+    statusContainer: {
+      minHeight: 180,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      paddingHorizontal: 24,
+    },
+
+    statusText: {
+      color: colors.muted,
+      fontSize: 15,
+      textAlign: 'center',
+    },
+
+    errorText: {
+      color: '#c62828',
+      fontSize: 15,
+      textAlign: 'center',
+    },
+
+    joinErrorText: {
+      color: '#c62828',
+      fontSize: 14,
+      marginTop: 12,
       paddingHorizontal: 16,
     },
 

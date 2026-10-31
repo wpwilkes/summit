@@ -21,6 +21,7 @@ model User {
   postVotes PostVote[]
   commentVotes CommentVote[]
   createdCommunities Community[]
+  communityMemberships CommunityMembership[]
 
   @@map("users")
 }
@@ -106,11 +107,27 @@ model Community {
   id          Int      @id @default(autoincrement())
   name        String   @unique
   description String   @default("")
+  topic       String   @default("Uncategorized")
+  subtopic    String   @default("General")
   creatorId   Int      @map("creator_id")
   createdAt   DateTime @default(now()) @map("created_at")
 
   creator User   @relation(fields: [creatorId], references: [id])
   posts   Post[]
+  memberships CommunityMembership[]
 
   @@map("communities")
+}
+
+model CommunityMembership {
+  userId      Int      @map("user_id")
+  communityId Int      @map("community_id")
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, communityId])
+  @@index([communityId])
+  @@map("community_memberships")
 }
