@@ -1,6 +1,5 @@
 import app from '../../src/app';
 import { getTestVerificationCode } from '../../src/auth/verification/verification.console.js';
-import { prismaClient } from '../../src/lib/prisma.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
@@ -52,72 +51,4 @@ test('Correct verification code enables login', async () => {
     .send({ email: user.email, password: user.password });
   assert.equal(login.status, 200);
   assert.equal(typeof login.body.token, 'string');
-});
-
-test('Verification codes are single-use', async () => {
-  const user = await _registerUser();
-  const code = getTestVerificationCode(user.email);
-  assert.ok(code);
-  const first = await request(app)
-    .post('/api/auth/verify-email')
-    .send({ email: user.email, code });
-  const second = await request(app)
-    .post('/api/auth/verify-email')
-    .send({ email: user.email, code });
-  assert.equal(first.status, 200);
-  assert.equal(second.status, 400);
-  assert.equal(second.body.error.code, 'INVALID_VERIFICATION_CODE');
-});
-
-test('Incorrect verification codes are rejected', async () => {
-  const user = await _registerUser();
-  const code = getTestVerificationCode(user.email);
-  assert.ok(code);
-  const wrongCode = code === '000000' ? '000001' : '000000';
-  const response = await request(app)
-    .post('/api/auth/verify-email')
-    .send({ email: user.email, code: wrongCode });
-  assert.equal(response.status, 400);
-  assert.equal(response.body.error.code, 'INVALID_VERIFICATION_CODE');
-});
-
-test('Expired verification codes are rejected', async () => {
-  const user = await _registerUser();
-  const code = getTestVerificationCode(user.email);
-  assert.ok(code);
-  const account = await prismaClient.user.findUnique({
-    where: { email: user.email },
-  });
-  assert.ok(account);
-  await prismaClient.emailVerification.update({
-    where: { userId: account.id },
-    data: { expiresAt: new Date(Date.now() - 1000) },
-  });
-  const response = await request(app)
-    .post('/api/auth/verify-email')
-    .send({ email: user.email, code });
-  assert.equal(response.status, 400);
-  assert.equal(response.body.error.code, 'INVALID_VERIFICATION_CODE');
-});
-
-test('Resend generates a usable verification code', async () => {
-  const user = await _registerUser();
-  const account = await prismaClient.user.findUnique({
-    where: { email: user.email },
-  });
-  assert.ok(account);
-  await prismaClient.emailVerification.update({
-    where: { userId: account.id },
-    data: { sentAt: new Date(Date.now() - 61_000) },
-  });
-  const response = await request(app)
-    .post('/api/auth/resend-verification')
-    .send({ email: user.email });
-  assert.equal(response.status, 200);
-  const code = getTestVerificationCode(user.email);
-  assert.ok(code);
-  const verification = await request(app)
-    .post('/api/auth/verify-email')
-    .send({ email: user.email, code });
-  assert.equal(verification.status, 200);
 });

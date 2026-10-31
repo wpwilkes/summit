@@ -12,8 +12,7 @@ import { POSTS_CONTRACTS } from '@summit/shared';
 import { Router } from 'express';
 import imagesRouter from './posts.images.js';
 
-const postsRouter: Router = Router();
-postsRouter.use(imagesRouter);
+const postsRouter = Router();
 
 postsRouter.post(
   POSTS_CONTRACTS.create.path,
@@ -38,5 +37,7 @@ postsRouter.patch(
   updatePostController,
 );
 postsRouter.put(POSTS_CONTRACTS.vote.path, requireAuth, votePostController);
+
+postsRouter.use(imagesRouter);
 
 export default postsRouter;

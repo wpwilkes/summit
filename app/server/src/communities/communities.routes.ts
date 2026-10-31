@@ -3,13 +3,13 @@ import {
   createCommunityController,
   getAllCommunitiesController,
   getCommunityController,
-  updateCommunityController,
   getCommunityPostsController,
+  updateCommunityController,
 } from './communities.controllers.js';
 import { COMMUNITIES_CONTRACTS } from '@summit/shared';
 import { Router } from 'express';
 
-const communitiesRouter: Router = Router();
+const communitiesRouter = Router();
 
 communitiesRouter.post(
   COMMUNITIES_CONTRACTS.create.path,
@@ -21,12 +21,12 @@ communitiesRouter.get(
   getAllCommunitiesController,
 );
 communitiesRouter.get(
-  COMMUNITIES_CONTRACTS.getPosts.path,
-  getCommunityPostsController,
-);
-communitiesRouter.get(
   COMMUNITIES_CONTRACTS.getByName.path,
   getCommunityController,
+);
+communitiesRouter.get(
+  COMMUNITIES_CONTRACTS.getPosts.path,
+  getCommunityPostsController,
 );
 communitiesRouter.patch(
   COMMUNITIES_CONTRACTS.update.path,

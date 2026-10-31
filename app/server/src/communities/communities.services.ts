@@ -1,4 +1,10 @@
 import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
+import {
+  DatabaseCommunity,
+  toCommunityContract,
+} from './communities.mappers.js';
 import {
   createCommunity,
   getAllCommunities,
@@ -8,34 +14,25 @@ import {
 } from './communities.repositories.js';
 import { toPostContract } from '../posts/posts.mapper.js';
 import type {
-  Community,
   CreateCommunityRequest,
   CreateCommunityResponse,
   GetAllCommunitiesResponse,
   GetCommunityResponse,
+  GetCommunityPostsResponse,
   UpdateCommunityRequest,
   UpdateCommunityResponse,
-  GetCommunityPostsResponse,
 } from '@summit/shared';
-
-type DatabaseCommunity = Awaited<ReturnType<typeof createCommunity>>;
-
-function toCommunityContract(community: DatabaseCommunity): Community {
-  return {
-    id: community.id,
-    name: community.name,
-    description: community.description,
-    creatorId: community.creatorId,
-    createdAt: community.createdAt.toISOString(),
-  };
-}
 
 async function requireExistingCommunity(
   name: string,
 ): Promise<DatabaseCommunity> {
   const community = await getCommunityByName(name);
   if (!community) {
-    throw new AppError(404, 'COMMUNITY_NOT_FOUND', 'Community not found.');
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.COMMUNITY_NOT_FOUND,
+      'Community not found.',
+    );
   }
   return community;
 }
@@ -47,8 +44,8 @@ export async function createCommunityService(
   const existing = await getCommunityByName(data.name);
   if (existing) {
     throw new AppError(
-      409,
-      'COMMUNITY_EXISTS',
+      HttpStatus.CONFLICT,
+      ErrorCode.COMMUNITY_ALREADY_EXISTS,
       'Community name already exists.',
     );
   }
@@ -74,6 +71,16 @@ export async function getCommunityService(
   };
 }
 
+export async function getCommunityPostsService(
+  name: string,
+): Promise<GetCommunityPostsResponse> {
+  const community = await requireExistingCommunity(name);
+  const posts = await getCommunityPosts(community.id);
+  return {
+    posts: posts.map(toPostContract),
+  };
+}
+
 export async function updateCommunityService(
   name: string,
   userId: number,
@@ -82,23 +89,13 @@ export async function updateCommunityService(
   const existing = await requireExistingCommunity(name);
   if (existing.creatorId !== userId) {
     throw new AppError(
-      403,
-      'FORBIDDEN',
+      HttpStatus.FORBIDDEN,
+      ErrorCode.FORBIDDEN,
       "You cannot edit another user's community.",
     );
   }
   const community = await updateCommunity(existing.id, data.description);
   return {
     community: toCommunityContract(community),
-  };
-}
-
-export async function getCommunityPostsService(
-  name: string,
-): Promise<GetCommunityPostsResponse> {
-  const community = await requireExistingCommunity(name);
-  const posts = await getCommunityPosts(community.id);
-  return {
-    posts: posts.map(toPostContract),
   };
 }

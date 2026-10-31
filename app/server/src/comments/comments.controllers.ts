@@ -1,4 +1,7 @@
 import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ParamsBodyRequest, ParamsRequest } from '../types/requests.js';
 import {
   createCommentService,
   createReplyService,
@@ -12,6 +15,8 @@ import {
   COMMENTS_CONTRACTS,
   type CommentVoteRequest,
   type CommentVoteResponse,
+  type CommentIdParams,
+  type CommentPostIdParams,
   type CreateCommentRequest,
   type CreateCommentResponse,
   type CreateReplyRequest,
@@ -21,129 +26,186 @@ import {
   type UpdateCommentRequest,
   type UpdateCommentResponse,
 } from '@summit/shared';
-import type { Request, Response } from 'express';
-
-type PostParams = {
-  postId: string;
-};
-
-type CommentParams = {
-  commentId: string;
-};
-
-function _parsePostId(params: PostParams): number {
-  const parsed = COMMENTS_CONTRACTS.create.params.safeParse(params);
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_ID', 'Invalid post ID.');
-  }
-  return parsed.data.postId;
-}
-
-function _parseCommentId(params: CommentParams): number {
-  const parsed = COMMENTS_CONTRACTS.update.params.safeParse(params);
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_ID', 'Invalid comment ID.');
-  }
-  return parsed.data.commentId;
-}
-
-function _requireUserId(request: Request): number {
-  if (request.userId === undefined) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
-  }
-  return request.userId;
-}
+import type { Response } from 'express';
 
 export async function createCommentController(
-  request: Request<PostParams, unknown, CreateCommentRequest>,
+  request: ParamsBodyRequest<CommentPostIdParams, CreateCommentRequest>,
   response: Response<CreateCommentResponse>,
 ): Promise<void> {
-  const userId = _requireUserId(request);
-  const postId = _parsePostId(request.params);
-  const parsed = COMMENTS_CONTRACTS.create.requestBody.safeParse(request.body);
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid comment data.');
+  const parsedParams = COMMENTS_CONTRACTS.create.params.safeParse(
+    request.params,
+  );
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_POST_ID,
+      'Invalid post ID.',
+    );
   }
-  const result = await createCommentService(postId, userId, parsed.data);
-  const body = COMMENTS_CONTRACTS.create.responseBody.parse(result);
-  response.status(201).json(body);
+  const parsedBody = COMMENTS_CONTRACTS.create.requestBody.safeParse(
+    request.body,
+  );
+  if (!parsedBody.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid comment data.',
+    );
+  }
+  const result = await createCommentService(
+    parsedParams.data.postId,
+    request.userId!,
+    parsedBody.data,
+  );
+  response.status(HttpStatus.CREATED).json(result);
 }
 
 export async function createReplyController(
-  request: Request<CommentParams, unknown, CreateReplyRequest>,
+  request: ParamsBodyRequest<CommentIdParams, CreateReplyRequest>,
   response: Response<CreateReplyResponse>,
 ): Promise<void> {
-  const userId = _requireUserId(request);
-  const parentId = _parseCommentId(request.params);
-  const parsed = COMMENTS_CONTRACTS.createReply.requestBody.safeParse(
+  const parsedParams = COMMENTS_CONTRACTS.createReply.params.safeParse(
+    request.params,
+  );
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_COMMENT_ID,
+      'Invalid comment ID.',
+    );
+  }
+  const parsedBody = COMMENTS_CONTRACTS.createReply.requestBody.safeParse(
     request.body,
   );
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid reply data.');
+  if (!parsedBody.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid comment data.',
+    );
   }
-  const result = await createReplyService(parentId, userId, parsed.data);
-  const body = COMMENTS_CONTRACTS.createReply.responseBody.parse(result);
-  response.status(201).json(body);
+  const result = await createReplyService(
+    parsedParams.data.commentId,
+    request.userId!,
+    parsedBody.data,
+  );
+  response.status(HttpStatus.CREATED).json(result);
 }
 
 export async function getCommentVoteController(
-  request: Request<CommentParams>,
+  request: ParamsRequest<CommentIdParams>,
   response: Response<CommentVoteResponse>,
 ): Promise<void> {
-  const userId = _requireUserId(request);
-  const commentId = _parseCommentId(request.params);
-  const result = await getCommentVoteService(commentId, userId);
-  const body = COMMENTS_CONTRACTS.getVote.responseBody.parse(result);
-  response.status(200).json(body);
+  const parsedParams = COMMENTS_CONTRACTS.getVote.params.safeParse(
+    request.params,
+  );
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_COMMENT_ID,
+      'Invalid comment ID.',
+    );
+  }
+  const result = await getCommentVoteService(
+    parsedParams.data.commentId,
+    request.userId!,
+  );
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function getPostCommentsController(
-  request: Request<PostParams>,
+  request: ParamsRequest<CommentPostIdParams>,
   response: Response<GetAllForPostResponse>,
 ): Promise<void> {
-  const postId = _parsePostId(request.params);
-  const result = await getPostCommentsService(postId);
-  const body = COMMENTS_CONTRACTS.getAllForPost.responseBody.parse(result);
-  response.status(200).json(body);
+  const parsedParams = COMMENTS_CONTRACTS.getAllForPost.params.safeParse(
+    request.params,
+  );
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_POST_ID,
+      'Invalid post ID.',
+    );
+  }
+  const result = await getPostCommentsService(parsedParams.data.postId);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function removeCommentController(
-  request: Request<CommentParams>,
+  request: ParamsRequest<CommentIdParams>,
   response: Response<RemoveCommentResponse>,
 ): Promise<void> {
-  const userId = _requireUserId(request);
-  const id = _parseCommentId(request.params);
-  const result = await removeCommentService(id, userId);
-  const body = COMMENTS_CONTRACTS.remove.responseBody.parse(result);
-  response.status(200).json(body);
+  const parsedParams = COMMENTS_CONTRACTS.remove.params.safeParse(
+    request.params,
+  );
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_COMMENT_ID,
+      'Invalid comment ID.',
+    );
+  }
+  const result = await removeCommentService(
+    parsedParams.data.commentId,
+    request.userId!,
+  );
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function updateCommentController(
-  request: Request<CommentParams, unknown, UpdateCommentRequest>,
+  request: ParamsBodyRequest<CommentIdParams, UpdateCommentRequest>,
   response: Response<UpdateCommentResponse>,
 ): Promise<void> {
-  const userId = _requireUserId(request);
-  const id = _parseCommentId(request.params);
+  const parsedParams = COMMENTS_CONTRACTS.update.params.safeParse(
+    request.params,
+  );
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_COMMENT_ID,
+      'Invalid comment ID.',
+    );
+  }
   const parsed = COMMENTS_CONTRACTS.update.requestBody.safeParse(request.body);
   if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid update data.');
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid update data.',
+    );
   }
-  const result = await updateCommentService(id, userId, parsed.data);
-  const body = COMMENTS_CONTRACTS.update.responseBody.parse(result);
-  response.status(200).json(body);
+  const result = await updateCommentService(
+    parsedParams.data.commentId,
+    request.userId!,
+    parsed.data,
+  );
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function voteCommentController(
-  request: Request<CommentParams, unknown, CommentVoteRequest>,
+  request: ParamsBodyRequest<CommentIdParams, CommentVoteRequest>,
   response: Response<CommentVoteResponse>,
 ): Promise<void> {
-  const userId = _requireUserId(request);
-  const commentId = _parseCommentId(request.params);
+  const parsedParams = COMMENTS_CONTRACTS.vote.params.safeParse(request.params);
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_COMMENT_ID,
+      'Invalid comment ID.',
+    );
+  }
   const parsed = COMMENTS_CONTRACTS.vote.requestBody.safeParse(request.body);
   if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid vote value.');
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      'INVALID_REQUEST',
+      'Invalid vote value.',
+    );
   }
-  const result = await voteCommentService(commentId, userId, parsed.data);
-  const body = COMMENTS_CONTRACTS.vote.responseBody.parse(result);
-  response.status(200).json(body);
+  const result = await voteCommentService(
+    parsedParams.data.commentId,
+    request.userId!,
+    parsed.data,
+  );
+  response.status(HttpStatus.OK).json(result);
 }

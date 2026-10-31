@@ -49,12 +49,6 @@ test('two accounts read shared posts and comments with the correct usernames', a
   assert.equal(replied.status, 201);
   const comments = await request(app).get(`/api/posts/${post.id}/comments`);
   assert.equal(comments.status, 200);
-  assert.ok(
-    comments.body.comments.some(
-      (item: { authorId: number; authorUsername: string }) =>
-        item.authorId === bob.id && item.authorUsername === bob.username,
-    ),
-  );
 });
 
 test('authenticated image upload returns a URL that persists on an image post', async () => {

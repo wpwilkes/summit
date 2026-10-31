@@ -5,21 +5,15 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**'],
   },
-
   js.configs.recommended,
   ...tseslint.configs.recommended,
-
   {
     files: ['src/**/*.ts', 'tests/**/*.ts'],
-
     languageOptions: {
-      globals: {
-        ...globals.node,
-      },
+      globals: globals.node,
     },
-
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',

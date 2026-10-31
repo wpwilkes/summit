@@ -11,7 +11,7 @@ type SetCommentVoteResult =
       userVote: CommentVoteValue;
     };
 
-function _normalizeCommentVote(value: number | undefined): CommentVoteValue {
+function normalizeCommentVote(value: number | undefined): CommentVoteValue {
   if (value === 1 || value === -1) {
     return value;
   }
@@ -37,16 +37,22 @@ export async function createComment(
   });
 }
 
-export async function getCommentById(id: number) {
+export async function getByIdPost(postId: number) {
+  return prismaClient.post.findUnique({
+    where: { id: postId },
+  });
+}
+
+export async function getCommentById(commentId: number) {
   return prismaClient.comment.findUnique({
-    where: { id },
     include: commentAuthor,
+    where: { id: commentId },
   });
 }
 
 export async function getCommentsByPostId(postId: number) {
   return prismaClient.comment.findMany({
-    where: { postId },
+    where: { postId: postId },
     orderBy: [{ createdAt: 'asc' }],
     include: commentAuthor,
   });
@@ -70,21 +76,13 @@ export async function getCommentVote(commentId: number, userId: number) {
   });
   return {
     votes: comment.vote,
-    userVote: _normalizeCommentVote(existingVote?.value),
+    userVote: normalizeCommentVote(existingVote?.value),
   };
 }
 
-export async function updateCommentById(id: number, body: string) {
+export async function removeCommentById(commentId: number) {
   return prismaClient.comment.update({
-    where: { id },
-    data: { body },
-    include: commentAuthor,
-  });
-}
-
-export async function removeCommentById(id: number) {
-  return prismaClient.comment.update({
-    where: { id },
+    where: { id: commentId },
     data: {
       deletedAt: new Date(),
     },
@@ -103,17 +101,13 @@ export async function setCommentVote(
         where: { id: commentId },
         select: { vote: true, deletedAt: true },
       });
-
       if (!comment) return { status: 'not_found' };
       if (comment.deletedAt) return { status: 'deleted' };
-
       const where = {
         commentId_userId: { commentId, userId },
       };
-
       const existing = await tx.commentVote.findUnique({ where });
-      const previous = _normalizeCommentVote(existing?.value);
-
+      const previous = normalizeCommentVote(existing?.value);
       if (previous === value) {
         return {
           status: 'ok',
@@ -121,7 +115,6 @@ export async function setCommentVote(
           userVote: value,
         };
       }
-
       if (value === 0) {
         if (existing) {
           await tx.commentVote.delete({ where });
@@ -152,4 +145,12 @@ export async function setCommentVote(
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     },
   );
+}
+
+export async function updateCommentById(commentId: number, body: string) {
+  return prismaClient.comment.update({
+    where: { id: commentId },
+    data: { body },
+    include: commentAuthor,
+  });
 }

@@ -18,10 +18,12 @@ export type Comment = z.infer<typeof CommentSchema>;
 export const CommentIdParamsSchema = z.object({
   commentId: z.coerce.number().int().positive(),
 });
+export type CommentIdParams = z.infer<typeof CommentIdParamsSchema>;
 
 export const CommentPostIdParamsSchema = z.object({
   postId: z.coerce.number().int().positive(),
 });
+export type CommentPostIdParams = z.infer<typeof CommentPostIdParamsSchema>;
 
 export const CommentVoteValueSchema = z.union([
   z.literal(-1),

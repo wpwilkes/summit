@@ -1,10 +1,12 @@
 import { AppError } from '../errors/app.error.js';
-import { getCommunityById } from '../communities/communities.repositories.js';
-import { toPostContract } from './posts.mapper.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { DatabasePost, toPostContract } from './posts.mapper.js';
 import {
   createPost,
   getAllPosts,
   getByIdPost,
+  getCommunityById,
   getPostVote,
   removePost,
   setPostVote,
@@ -22,12 +24,14 @@ import type {
   UpdatePostResponse,
 } from '@summit/shared';
 
-type DatabasePost = Awaited<ReturnType<typeof createPost>>;
-
-async function requireExistingPost(id: number): Promise<DatabasePost> {
-  const post = await getByIdPost(id);
+async function requireExistingPost(postId: number): Promise<DatabasePost> {
+  const post = await getByIdPost(postId);
   if (!post) {
-    throw new AppError(404, 'POST_NOT_FOUND', 'Post not found.');
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.POST_NOT_FOUND,
+      'Post not found.',
+    );
   }
   return post;
 }
@@ -38,7 +42,11 @@ export async function createPostService(
 ): Promise<CreatePostResponse> {
   const community = await getCommunityById(data.communityId);
   if (!community) {
-    throw new AppError(404, 'COMMUNITY_NOT_FOUND', 'Community not found.');
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.COMMUNITY_NOT_FOUND,
+      'Community not found.',
+    );
   }
   const post = await createPost(
     data.title,
@@ -64,9 +72,9 @@ export async function getAllPostsService(): Promise<GetAllPostsResponse> {
 }
 
 export async function getByIdPostService(
-  id: number,
+  postId: number,
 ): Promise<GetByIdPostResponse> {
-  const post = await requireExistingPost(id);
+  const post = await requireExistingPost(postId);
   return {
     post: toPostContract(post),
   };
@@ -76,39 +84,40 @@ export async function getPostVoteService(
   postId: number,
   userId: number,
 ): Promise<PostVoteResponse> {
+  const post = await requireExistingPost(postId);
   const result = await getPostVote(postId, userId);
-  if (!result) {
-    throw new AppError(404, 'POST_NOT_FOUND', 'Post not found.');
-  }
-  return result;
+  return {
+    votes: post.vote,
+    userVote: result.vote,
+  };
 }
 
 export async function removePostService(
-  id: number,
+  postId: number,
   userId: number,
 ): Promise<RemovePostResponse> {
-  const existingPost = await requireExistingPost(id);
+  const existingPost = await requireExistingPost(postId);
   if (existingPost.authorId !== userId) {
     throw new AppError(
-      403,
-      'FORBIDDEN',
+      HttpStatus.FORBIDDEN,
+      ErrorCode.FORBIDDEN,
       "You cannot delete another user's post.",
     );
   }
-  await removePost(id);
+  await removePost(postId);
   return { success: true };
 }
 
 export async function updatePostService(
-  id: number,
+  postId: number,
   userId: number,
   data: UpdatePostRequest,
 ): Promise<UpdatePostResponse> {
-  const existingPost = await requireExistingPost(id);
+  const existingPost = await requireExistingPost(postId);
   if (existingPost.authorId !== userId) {
     throw new AppError(
-      403,
-      'FORBIDDEN',
+      HttpStatus.FORBIDDEN,
+      ErrorCode.FORBIDDEN,
       "You cannot edit another user's post.",
     );
   }
@@ -117,7 +126,7 @@ export async function updatePostService(
     if (!community)
       throw new AppError(404, 'COMMUNITY_NOT_FOUND', 'Community not found.');
   }
-  const updatedPost = await updatePost(id, data);
+  const updatedPost = await updatePost(postId, data);
   return {
     post: toPostContract(updatedPost),
   };
@@ -128,9 +137,14 @@ export async function votePostService(
   userId: number,
   data: PostVoteRequest,
 ): Promise<PostVoteResponse> {
+  await requireExistingPost(postId);
   const result = await setPostVote(postId, userId, data.value);
   if (!result) {
-    throw new AppError(404, 'POST_NOT_FOUND', 'Post not found.');
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.POST_NOT_FOUND,
+      'Post not found.',
+    );
   }
   return result;
 }

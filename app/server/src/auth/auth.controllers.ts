@@ -1,4 +1,6 @@
 import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
 import type { BodyRequest } from '../types/requests.js';
 import { getMe, loginService, registerService } from './auth.services.js';
 import {
@@ -18,23 +20,22 @@ export async function loginController(
 ): Promise<void> {
   const parsed = AUTH_CONTRACTS.login.requestBody.safeParse(request.body);
   if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid login request.');
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid login request.',
+    );
   }
-  const serviceResult = await loginService(parsed.data);
-  const result = AUTH_CONTRACTS.login.responseBody.parse(serviceResult);
-  response.status(200).json(result);
+  const result = await loginService(parsed.data);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function meController(
   request: BodyRequest<MeRequest>,
   response: Response<MeResponse>,
 ): Promise<void> {
-  if (request.userId === undefined) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
-  }
-  const serviceResult = await getMe(request.userId);
-  const result = AUTH_CONTRACTS.me.responseBody.parse(serviceResult);
-  response.status(200).json(result);
+  const result = await getMe(request.userId!);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function registerController(
@@ -43,9 +44,12 @@ export async function registerController(
 ): Promise<void> {
   const parsed = AUTH_CONTRACTS.register.requestBody.safeParse(request.body);
   if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid registration request.');
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid registration request.',
+    );
   }
-  const serviceResult = await registerService(parsed.data);
-  const result = AUTH_CONTRACTS.register.responseBody.parse(serviceResult);
-  response.status(201).json(result);
+  const result = await registerService(parsed.data);
+  response.status(HttpStatus.CREATED).json(result);
 }
