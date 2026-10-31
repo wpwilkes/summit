@@ -20,6 +20,8 @@ async function _createCommunity(token: string, name = _uniqueName()) {
     .send({
       name,
       description: 'Test community',
+      topic: 'Technology',
+      subtopic: 'Programming',
     });
   assert.equal(response.status, 201);
   return response.body.community;
@@ -34,10 +36,14 @@ test('POST /api/communities creates a community', async () => {
     .send({
       name,
       description: 'A community for testing',
+      topic: 'Technology',
+      subtopic: 'Programming',
     });
   assert.equal(response.status, 201);
   assert.equal(response.body.community.name, name);
   assert.equal(response.body.community.description, 'A community for testing');
+  assert.equal(response.body.community.topic, 'Technology');
+  assert.equal(response.body.community.subtopic, 'Programming');
   assert.equal(response.body.community.creatorId, user.id);
   assert.equal(typeof response.body.community.id, 'number');
 });
@@ -46,6 +52,8 @@ test('POST /api/communities requires authentication', async () => {
   const response = await request(app).post('/api/communities').send({
     name: _uniqueName(),
     description: 'Unauthorized',
+    topic: 'Technology',
+    subtopic: 'Programming',
   });
   assert.equal(response.status, 401);
   assert.equal(response.body.error.code, 'UNAUTHORIZED');
@@ -61,6 +69,8 @@ test('POST /api/communities rejects duplicate names', async () => {
     .send({
       name,
       description: 'Duplicate',
+      topic: 'Technology',
+      subtopic: 'Programming',
     });
   assert.equal(response.status, 409);
   assert.equal(response.body.error.code, 'COMMUNITY_ALREADY_EXISTS');
@@ -191,4 +201,113 @@ test('GET community posts returns an empty array when none exist', async () => {
   );
   assert.equal(response.status, 200);
   assert.deepEqual(response.body.posts, []);
+});
+
+test('POST /api/communities/:name/join joins a community', async () => {
+  const creator = await _registerUser();
+  const otherUser = await _registerUser();
+  const community = await _createCommunity(creator.token);
+
+  const response = await request(app)
+    .post(`/api/communities/${community.name}/join`)
+    .set('Authorization', `Bearer ${otherUser.token}`);
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.communityId, community.id);
+  assert.equal(response.body.joined, true);
+});
+
+test('POST join requires authentication', async () => {
+  const user = await _registerUser();
+  const community = await _createCommunity(user.token);
+
+  const response = await request(app).post(
+    `/api/communities/${community.name}/join`,
+  );
+
+  assert.equal(response.status, 401);
+  assert.equal(response.body.error.code, 'UNAUTHORIZED');
+});
+
+test('GET /api/communities/joined returns joined communities', async () => {
+  const user = await _registerUser();
+  const otherUser = await _registerUser();
+
+  const joinedCommunity = await _createCommunity(user.token);
+  const otherCommunity = await _createCommunity(otherUser.token);
+
+  const response = await request(app)
+    .get('/api/communities/joined')
+    .set('Authorization', `Bearer ${user.token}`);
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(response.body.communities));
+
+  assert.ok(
+    response.body.communities.some(
+      (c: { id: number }) => c.id === joinedCommunity.id,
+    ),
+  );
+
+  assert.ok(
+    !response.body.communities.some(
+      (c: { id: number }) => c.id === otherCommunity.id,
+    ),
+  );
+});
+
+test('GET /api/communities/joined requires authentication', async () => {
+  const response = await request(app).get('/api/communities/joined');
+
+  assert.equal(response.status, 401);
+  assert.equal(response.body.error.code, 'UNAUTHORIZED');
+});
+
+test('DELETE /api/communities/:name/join leaves a community', async () => {
+  const creator = await _registerUser();
+  const otherUser = await _registerUser();
+  const community = await _createCommunity(creator.token);
+
+  const joinResponse = await request(app)
+    .post(`/api/communities/${community.name}/join`)
+    .set('Authorization', `Bearer ${otherUser.token}`);
+
+  assert.equal(joinResponse.status, 200);
+
+  const leaveResponse = await request(app)
+    .delete(`/api/communities/${community.name}/join`)
+    .set('Authorization', `Bearer ${otherUser.token}`);
+
+  assert.equal(leaveResponse.status, 200);
+  assert.equal(leaveResponse.body.communityId, community.id);
+  assert.equal(leaveResponse.body.joined, false);
+
+  const joinedResponse = await request(app)
+    .get('/api/communities/joined')
+    .set('Authorization', `Bearer ${otherUser.token}`);
+
+  assert.equal(joinedResponse.status, 200);
+
+  assert.ok(
+    !joinedResponse.body.communities.some(
+      (c: { id: number }) => c.id === community.id,
+    ),
+  );
+});
+
+test('creator automatically joins a community they create', async () => {
+  const user = await _registerUser();
+  const community = await _createCommunity(user.token);
+
+  const response = await request(app)
+    .get('/api/communities/joined')
+    .set('Authorization', `Bearer ${user.token}`);
+
+  assert.equal(response.status, 200);
+
+  assert.ok(
+    response.body.communities.some(
+      (c: { id: number }) => c.id === community.id,
+    ),
+  );
 });
