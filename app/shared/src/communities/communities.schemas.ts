@@ -25,8 +25,8 @@ export type CommunityNameParams = z.infer<typeof CommunityNameParamsSchema>;
 export const CreateCommunityRequestSchema = z.object({
   name: CommunityNameSchema,
   description: z.string(),
-  topic: z.string(),
-  subtopic: z.string(),
+  topic: z.string().default('Uncategorized'),
+  subtopic: z.string().default('General'),
 });
 
 export type CreateCommunityRequest = z.infer<
