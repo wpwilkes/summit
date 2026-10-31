@@ -1,11 +1,11 @@
 import {
-  verifyEmailController,
   resendVerificationController,
+  verifyEmailController,
 } from './verification.controllers.js';
 import { AUTH_CONTRACTS } from '@summit/shared';
 import { Router } from 'express';
 
-const verificationRouter: Router = Router();
+const verificationRouter = Router();
 
 verificationRouter.post(
   AUTH_CONTRACTS.resendVerification.path,

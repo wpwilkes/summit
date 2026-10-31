@@ -1,7 +1,10 @@
 import { AppError } from '../errors/app.error.js';
-import { getByIdPost } from '../posts/posts.repositories.js';
+import { HttpStatus } from '../errors/http-status.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { DatabaseComment, toCommentContract } from './comments.mapper.js';
 import {
   createComment,
+  getByIdPost,
   getCommentsByPostId,
   getCommentById,
   getCommentVote,
@@ -10,7 +13,6 @@ import {
   updateCommentById,
 } from './comments.repositories.js';
 import type {
-  Comment,
   CreateCommentRequest,
   CreateCommentResponse,
   CreateReplyRequest,
@@ -23,53 +25,47 @@ import type {
   CommentVoteResponse,
 } from '@summit/shared';
 
-type DatabaseComment = Awaited<ReturnType<typeof createComment>>;
-
-function _toCommentContract(comment: DatabaseComment): Comment {
-  const deleted = comment.deletedAt !== null;
-  return {
-    id: comment.id,
-    postId: comment.postId,
-    authorId: comment.authorId,
-    parentId: comment.parentId,
-    body: deleted ? '[deleted]' : comment.body,
-    votes: comment.vote,
-    deleted,
-    createdAt: comment.createdAt.toISOString(),
-  };
-}
-
-async function _requireExistingPost(postId: number): Promise<void> {
+async function requireExistingPost(postId: number): Promise<void> {
   const post = await getByIdPost(postId);
   if (!post) {
-    throw new AppError(404, 'POST_NOT_FOUND', 'Post not found.');
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.POST_NOT_FOUND,
+      'Post not found.',
+    );
   }
 }
 
-async function _requireExistingComment(id: number): Promise<DatabaseComment> {
-  const comment = await getCommentById(id);
+async function requireExistingComment(
+  commentId: number,
+): Promise<DatabaseComment> {
+  const comment = await getCommentById(commentId);
   if (!comment) {
-    throw new AppError(404, 'COMMENT_NOT_FOUND', 'Comment not found.');
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.COMMENT_NOT_FOUND,
+      'Comment not found.',
+    );
   }
   return comment;
 }
 
-async function _requireEditableComment(
-  id: number,
+async function requireEditableComment(
+  comentId: number,
   userId: number,
 ): Promise<DatabaseComment> {
-  const comment = await _requireExistingComment(id);
+  const comment = await requireExistingComment(comentId);
   if (comment.authorId !== userId) {
     throw new AppError(
-      403,
-      'FORBIDDEN',
+      HttpStatus.FORBIDDEN,
+      ErrorCode.FORBIDDEN,
       "You cannot modify another user's comment.",
     );
   }
   if (comment.deletedAt !== null) {
     throw new AppError(
-      409,
-      'COMMENT_DELETED',
+      HttpStatus.CONFLICT,
+      ErrorCode.COMMENT_DELETED,
       'This comment has already been deleted.',
     );
   }
@@ -81,10 +77,10 @@ export async function createCommentService(
   userId: number,
   data: CreateCommentRequest,
 ): Promise<CreateCommentResponse> {
-  await _requireExistingPost(postId);
+  await requireExistingPost(postId);
   const comment = await createComment(postId, userId, data.body);
   return {
-    comment: _toCommentContract(comment),
+    comment: toCommentContract(comment),
   };
 }
 
@@ -93,7 +89,7 @@ export async function createReplyService(
   userId: number,
   data: CreateReplyRequest,
 ): Promise<CreateReplyResponse> {
-  const parent = await _requireExistingComment(parentId);
+  const parent = await requireExistingComment(parentId);
   const reply = await createComment(
     parent.postId,
     userId,
@@ -101,7 +97,7 @@ export async function createReplyService(
     parent.id,
   );
   return {
-    comment: _toCommentContract(reply),
+    comment: toCommentContract(reply),
   };
 }
 
@@ -111,7 +107,11 @@ export async function getCommentVoteService(
 ): Promise<CommentVoteResponse> {
   const result = await getCommentVote(commentId, userId);
   if (!result) {
-    throw new AppError(404, 'COMMENT_NOT_FOUND', 'Comment not found.');
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.COMMENT_NOT_FOUND,
+      'Comment not found.',
+    );
   }
   return result;
 }
@@ -119,31 +119,31 @@ export async function getCommentVoteService(
 export async function getPostCommentsService(
   postId: number,
 ): Promise<GetAllForPostResponse> {
-  await _requireExistingPost(postId);
+  await requireExistingPost(postId);
   const comments = await getCommentsByPostId(postId);
   return {
-    comments: comments.map(_toCommentContract),
+    comments: comments.map(toCommentContract),
   };
 }
 
 export async function removeCommentService(
-  id: number,
+  commentId: number,
   userId: number,
 ): Promise<RemoveCommentResponse> {
-  await _requireEditableComment(id, userId);
-  await removeCommentById(id);
+  await requireEditableComment(commentId, userId);
+  await removeCommentById(commentId);
   return { success: true };
 }
 
 export async function updateCommentService(
-  id: number,
+  commentId: number,
   userId: number,
   data: UpdateCommentRequest,
 ): Promise<UpdateCommentResponse> {
-  await _requireEditableComment(id, userId);
-  const comment = await updateCommentById(id, data.body);
+  await requireEditableComment(commentId, userId);
+  const comment = await updateCommentById(commentId, data.body);
   return {
-    comment: _toCommentContract(comment),
+    comment: toCommentContract(comment),
   };
 }
 
@@ -154,12 +154,16 @@ export async function voteCommentService(
 ): Promise<CommentVoteResponse> {
   const result = await setCommentVote(commentId, userId, data.value);
   if (result.status === 'not_found') {
-    throw new AppError(404, 'COMMENT_NOT_FOUND', 'Comment not found.');
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.COMMENT_NOT_FOUND,
+      'Comment not found.',
+    );
   }
   if (result.status === 'deleted') {
     throw new AppError(
-      409,
-      'COMMENT_DELETED',
+      HttpStatus.CONFLICT,
+      ErrorCode.COMMENT_DELETED,
       'You cannot vote on a deleted comment.',
     );
   }

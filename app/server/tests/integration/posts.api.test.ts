@@ -159,7 +159,7 @@ test('GET /api/posts/:postId returns 404 for a missing post', async () => {
 
 test('GET /api/posts/:postId returns 400 for an invalid ID', async () => {
   const response = await request(app).get('/api/posts/invalidId');
-  _assertApiError(response, 400, 'INVALID_ID');
+  _assertApiError(response, 400, 'INVALID_POST_ID');
 });
 
 test('PATCH /api/posts/:postId updates an existing post', async () => {

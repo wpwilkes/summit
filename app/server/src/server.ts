@@ -1,6 +1,9 @@
 import app from './app.js';
-import { SERVER_HOST, SERVER_PORT } from './config/env.js';
+import { getServerBindAddress, getServerPort } from './config/server.js';
 
-app.listen(SERVER_PORT, SERVER_HOST, () => {
-  console.log(`summit server listening on ${SERVER_HOST}:${SERVER_PORT}`);
+const serverBindAddress = getServerBindAddress();
+const serverPort = getServerPort();
+
+app.listen(serverPort, serverBindAddress, () => {
+  console.log(`summit API listening on ${serverBindAddress}:${serverPort}`);
 });

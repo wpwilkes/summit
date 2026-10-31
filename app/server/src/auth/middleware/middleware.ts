@@ -1,5 +1,8 @@
 import { AppError } from '../../errors/app.error.js';
-import type { NextFunction, Request, Response } from 'express';
+import { ErrorCode } from '../../errors/error-code.js';
+import { HttpStatus } from '../../errors/http-status.js';
+import { verifyToken } from '../auth.token.js';
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 export function requireAuth(
@@ -9,40 +12,31 @@ export function requireAuth(
 ): void {
   const authHeader = request.headers.authorization;
   if (!authHeader) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
+    throw new AppError(
+      HttpStatus.UNAUTHORIZED,
+      ErrorCode.UNAUTHORIZED,
+      'Authentication required.',
+    );
   }
-
   const parts = authHeader.split(' ');
   if (parts.length !== 2 || parts[0] !== 'Bearer' || !parts[1]) {
     throw new AppError(
-      401,
-      'INVALID_AUTH_HEADER',
+      HttpStatus.UNAUTHORIZED,
+      ErrorCode.UNAUTHORIZED,
       'Invalid authorization header.',
     );
   }
-
-  const token = parts[1];
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET is not configured.');
-  }
-
-  let payload: jwt.JwtPayload | string;
   try {
-    payload = jwt.verify(token, secret);
-  } catch {
-    throw new AppError(401, 'INVALID_TOKEN', 'Invalid or expired token.');
+    request.userId = verifyToken(parts[1]);
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new AppError(
+        HttpStatus.UNAUTHORIZED,
+        ErrorCode.INVALID_TOKEN,
+        'Invalid or expired token.',
+      );
+    }
+    throw error;
   }
-
-  if (typeof payload === 'string' || typeof payload.sub !== 'string') {
-    throw new AppError(401, 'INVALID_TOKEN', 'Invalid token.');
-  }
-
-  const userId = Number(payload.sub);
-  if (!Number.isSafeInteger(userId) || userId <= 0) {
-    throw new AppError(401, 'INVALID_TOKEN', 'Invalid token.');
-  }
-  request.userId = userId;
-
   next();
 }

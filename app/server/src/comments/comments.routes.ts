@@ -11,7 +11,7 @@ import {
 import { COMMENTS_CONTRACTS } from '@summit/shared';
 import { Router } from 'express';
 
-const commentsRouter: Router = Router();
+const commentsRouter = Router();
 
 commentsRouter.post(
   COMMENTS_CONTRACTS.create.path,

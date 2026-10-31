@@ -1,18 +1,24 @@
 import { AppError } from './app.error.js';
+import { ErrorCode } from './error-code.js';
+import { HttpStatus } from './http-status.js';
 import type { ApiError } from '@summit/shared';
-import type { ErrorRequestHandler } from 'express';
+import type {
+  ErrorRequestHandler,
+  NextFunction,
+  Request,
+  Response,
+} from 'express';
 
 export const errorHandler: ErrorRequestHandler = (
-  error: unknown,
-  _request,
-  response,
-  _next,
+  error: AppError | Error,
+  _request: Request,
+  response: Response,
+  next: NextFunction,
 ) => {
   if (response.headersSent) {
-    _next(error);
+    next(error);
     return;
   }
-
   if (error instanceof AppError) {
     const body: ApiError = {
       error: {
@@ -23,13 +29,12 @@ export const errorHandler: ErrorRequestHandler = (
     response.status(error.statusCode).json(body);
     return;
   }
-
   console.error(error);
   const body: ApiError = {
     error: {
-      code: 'INTERNAL_ERROR',
+      code: ErrorCode.INTERNAL_SERVER_ERROR,
       message: 'Internal server error.',
     },
   };
-  response.status(500).json(body);
+  response.status(HttpStatus.INTERNAL_SERVER_ERROR).json(body);
 };

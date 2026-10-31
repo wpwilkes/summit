@@ -8,7 +8,7 @@ import verificationRouter from './verification/verification.routes.js';
 import { AUTH_CONTRACTS } from '@shared/dist/index.js';
 import { Router } from 'express';
 
-const authRouter: Router = Router();
+const authRouter = Router();
 
 authRouter.post(AUTH_CONTRACTS.login.path, loginController);
 authRouter.get(AUTH_CONTRACTS.me.path, requireAuth, meController);

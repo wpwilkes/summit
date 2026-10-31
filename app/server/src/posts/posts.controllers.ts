@@ -1,8 +1,10 @@
 import { AppError } from '../errors/app.error.js';
+import { ErrorCode } from '../errors/error-code.js';
+import { HttpStatus } from '../errors/http-status.js';
 import type {
   BodyRequest,
-  ParamsRequest,
   ParamsBodyRequest,
+  ParamsRequest,
 } from '../types/requests.js';
 import {
   createPostService,
@@ -15,134 +17,143 @@ import {
 } from './posts.service.js';
 import {
   POSTS_CONTRACTS,
+  type PostIdParams,
   type CreatePostRequest,
   type CreatePostResponse,
-  type GetAllPostsRequest,
   type GetAllPostsResponse,
   type GetByIdPostResponse,
-  type RemovePostResponse,
   type PostVoteRequest,
+  type PostVoteResponse,
+  type RemovePostResponse,
   type UpdatePostRequest,
   type UpdatePostResponse,
-  type PostVoteResponse,
 } from '@summit/shared';
 import type { Request, Response } from 'express';
-
-type PostParams = {
-  postId: string;
-};
-
-type PostVoteParams = {
-  postId: string;
-};
-
-function _parsePostId(request: Request<PostParams>): number {
-  const parsed = POSTS_CONTRACTS.getById.params.safeParse(request.params);
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_ID', 'Invalid post ID.');
-  }
-  return parsed.data.postId;
-}
-
-function _parseVotePostId(request: Request<PostVoteParams>): number {
-  const parsed = POSTS_CONTRACTS.vote.params.safeParse(request.params);
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_ID', 'Invalid post ID.');
-  }
-  return parsed.data.postId;
-}
 
 export async function createPostController(
   request: BodyRequest<CreatePostRequest>,
   response: Response<CreatePostResponse>,
 ): Promise<void> {
-  if (request.userId === undefined) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
-  }
   const parsed = POSTS_CONTRACTS.create.requestBody.safeParse(request.body);
   if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid post data.');
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid post data.',
+    );
   }
-  const result = await createPostService(parsed.data, request.userId);
-  const body = POSTS_CONTRACTS.create.responseBody.parse(result);
-  response.status(201).json(body);
+  const result = await createPostService(parsed.data, request.userId!);
+  response.status(HttpStatus.CREATED).json(result);
 }
 
 export async function getAllPostsController(
-  _request: Request<GetAllPostsRequest>,
+  _request: Request,
   response: Response<GetAllPostsResponse>,
 ): Promise<void> {
   const result = await getAllPostsService();
-  const body = POSTS_CONTRACTS.getAll.responseBody.parse(result);
-  response.status(200).json(body);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function getByIdPostController(
-  request: ParamsRequest<PostParams>,
+  request: ParamsRequest<PostIdParams>,
   response: Response<GetByIdPostResponse>,
 ): Promise<void> {
-  const id = _parsePostId(request);
-  const result = await getByIdPostService(id);
-  const body = POSTS_CONTRACTS.getById.responseBody.parse(result);
-  response.status(200).json(body);
+  const parsed = POSTS_CONTRACTS.getById.params.safeParse(request.params);
+  if (!parsed.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_POST_ID,
+      'Invalid post ID.',
+    );
+  }
+  const result = await getByIdPostService(parsed.data.postId);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function getPostVoteController(
-  request: Request<PostVoteParams>,
+  request: ParamsRequest<PostIdParams>,
   response: Response<PostVoteResponse>,
 ): Promise<void> {
-  if (request.userId === undefined) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
+  const parsed = POSTS_CONTRACTS.getVote.params.safeParse(request.params);
+  if (!parsed.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_POST_ID,
+      'Invalid post ID.',
+    );
   }
-  const postId = _parseVotePostId(request);
-  const result = await getPostVoteService(postId, request.userId);
-  const body = POSTS_CONTRACTS.getVote.responseBody.parse(result);
-  response.status(200).json(body);
+  const result = await getPostVoteService(parsed.data.postId, request.userId!);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function removePostController(
-  request: ParamsRequest<PostParams>,
+  request: ParamsRequest<PostIdParams>,
   response: Response<RemovePostResponse>,
 ): Promise<void> {
-  if (request.userId === undefined) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
+  const parsed = POSTS_CONTRACTS.remove.params.safeParse(request.params);
+  if (!parsed.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_POST_ID,
+      'Invalid post ID.',
+    );
   }
-  const id = _parsePostId(request);
-  const result = await removePostService(id, request.userId);
-  const body = POSTS_CONTRACTS.remove.responseBody.parse(result);
-  response.status(200).json(body);
+  const result = await removePostService(parsed.data.postId, request.userId!);
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function updatePostController(
-  request: ParamsBodyRequest<PostParams, UpdatePostRequest>,
+  request: ParamsBodyRequest<PostIdParams, UpdatePostRequest>,
   response: Response<UpdatePostResponse>,
 ): Promise<void> {
-  if (request.userId === undefined) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
+  const parsedParams = POSTS_CONTRACTS.update.params.safeParse(request.params);
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_POST_ID,
+      'Invalid post ID.',
+    );
   }
-  const id = _parsePostId(request);
-  const parsed = POSTS_CONTRACTS.update.requestBody.safeParse(request.body);
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid update data.');
+  const parsedBody = POSTS_CONTRACTS.update.requestBody.safeParse(request.body);
+  if (!parsedBody.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid update data.',
+    );
   }
-  const result = await updatePostService(id, request.userId, parsed.data);
-  const body = POSTS_CONTRACTS.update.responseBody.parse(result);
-  response.status(200).json(body);
+  const result = await updatePostService(
+    parsedParams.data.postId,
+    request.userId!,
+    parsedBody.data,
+  );
+  response.status(HttpStatus.OK).json(result);
 }
 
 export async function votePostController(
-  request: Request<PostVoteParams, unknown, PostVoteRequest>,
+  request: ParamsBodyRequest<PostIdParams, PostVoteRequest>,
   response: Response<PostVoteResponse>,
 ): Promise<void> {
-  if (request.userId === undefined) {
-    throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
+  const parsedParams = POSTS_CONTRACTS.vote.params.safeParse(request.params);
+  if (!parsedParams.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_POST_ID,
+      'Invalid post ID.',
+    );
   }
-  const postId = _parseVotePostId(request);
-  const parsed = POSTS_CONTRACTS.vote.requestBody.safeParse(request.body);
-  if (!parsed.success) {
-    throw new AppError(400, 'INVALID_REQUEST', 'Invalid vote value.');
+  const parsedBody = POSTS_CONTRACTS.vote.requestBody.safeParse(request.body);
+  if (!parsedBody.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid update data.',
+    );
   }
-  const result = await votePostService(postId, request.userId, parsed.data);
-  const body = POSTS_CONTRACTS.vote.responseBody.parse(result);
-  response.status(200).json(body);
+  const result = await votePostService(
+    parsedParams.data.postId,
+    request.userId!,
+    parsedBody.data,
+  );
+  response.status(HttpStatus.OK).json(result);
 }

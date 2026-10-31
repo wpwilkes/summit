@@ -1,4 +1,6 @@
 import { AppError } from '../../errors/app.error.js';
+import { ErrorCode } from '../../errors/error-code.js';
+import { HttpStatus } from '../../errors/http-status.js';
 import { findByEmail } from '../auth.repositories.js';
 import {
   createVerificationCode,
@@ -21,21 +23,24 @@ export async function resendVerificationService(
 ): Promise<ResendVerificationResponse> {
   const email = request.email.trim().toLowerCase();
   const user = await findByEmail(email);
-  const message =
-    'If this account requires verification, a new code will be generated when allowed.';
-  if (!user || user.emailVerifiedAt !== null) {
-    return { message };
+  if (!user) {
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.USER_NOT_FOUND,
+      'That email is not registered.',
+    );
+  }
+  if (user.emailVerified) {
+    throw new AppError(
+      HttpStatus.FORBIDDEN,
+      ErrorCode.USER_ALREADY_EXISTS,
+      'That email is already verified.',
+    );
   }
   const verification = createVerificationCode(email);
-  const replaced = await replaceVerificationCode(
-    user.id,
-    verification.codeHash,
-    verification.expiresAt,
-  );
-  if (replaced) {
-    sendVerificationCode(email, verification.code);
-  }
-  return { message };
+  await replaceVerificationCode(user.id, verification.codeHash);
+  sendVerificationCode(email, verification.code);
+  return { message: 'New verification code sent.' };
 }
 
 export async function verifyEmailService(
@@ -43,12 +48,12 @@ export async function verifyEmailService(
 ): Promise<VerifyEmailResponse> {
   const email = request.email.trim().toLowerCase();
   const codeHash = hashVerificationCode(email, request.code);
-  const verified = await consumeVerificationCode(email, codeHash);
-  if (!verified) {
+  const user = await consumeVerificationCode(email, codeHash);
+  if (!user || !user.emailVerified) {
     throw new AppError(
-      400,
-      'INVALID_VERIFICATION_CODE',
-      'Invalid, expired, or already used verification code.',
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_VERIFICATION_CODE,
+      'Invalid verification code.',
     );
   }
   return {

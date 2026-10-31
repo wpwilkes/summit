@@ -15,6 +15,5 @@ export function createVerificationCode(email: string) {
   return {
     code,
     codeHash: hashVerificationCode(email, code),
-    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
   };
 }
