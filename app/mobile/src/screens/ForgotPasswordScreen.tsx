@@ -1,4 +1,5 @@
 import {
+  type ComponentRef,
   useEffect,
   useRef,
   useState,
@@ -44,7 +45,7 @@ export default function ForgotPasswordScreen({
     useState(false);
 
   const scrollViewRef =
-    useRef<ScrollView>(null);
+    useRef<ComponentRef<typeof ScrollView>>(null);
 
   useEffect(() => {
     const showSubscription =

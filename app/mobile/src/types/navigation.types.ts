@@ -1,5 +1,4 @@
 export type RootStackParamList = {
-  Search: undefined;
   Welcome: undefined;
 
   PublicFeed: undefined;

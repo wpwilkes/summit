@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type ComponentRef, useRef, useState } from 'react';
 import {
   FlatList,
   Keyboard,
@@ -42,7 +42,7 @@ export default function PostDiscussion({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const input = useRef<TextInput>(null);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
   const comments = service.comments(post.id);
 
   const act = async (action: () => Promise<void>) => {

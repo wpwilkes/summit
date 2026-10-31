@@ -196,7 +196,6 @@ export default function HomeScreen({
 
   return (
     <SummitPostsScreen
-    onSearchPress={() => navigation.navigate('Search')}
       onLogout={
         handleLogout
       }
