@@ -14,17 +14,13 @@ export const CommunitySchema = z.object({
   memberCount: z.int().nonnegative(),
 });
 
-export type Community = z.infer<
-  typeof CommunitySchema
->;
+export type Community = z.infer<typeof CommunitySchema>;
 
 export const CommunityNameParamsSchema = z.object({
   name: CommunityNameSchema,
 });
 
-export type CommunityNameParams = z.infer<
-  typeof CommunityNameParamsSchema
->;
+export type CommunityNameParams = z.infer<typeof CommunityNameParamsSchema>;
 
 export const CreateCommunityRequestSchema = z.object({
   name: CommunityNameSchema,
@@ -46,9 +42,7 @@ export type CreateCommunityResponse = z.infer<
 >;
 
 export const GetAllCommunitiesResponseSchema = z.object({
-  communities: z.array(
-    CommunitySchema,
-  ),
+  communities: z.array(CommunitySchema),
 });
 
 export type GetAllCommunitiesResponse = z.infer<
@@ -59,9 +53,7 @@ export const GetCommunityResponseSchema = z.object({
   community: CommunitySchema,
 });
 
-export type GetCommunityResponse = z.infer<
-  typeof GetCommunityResponseSchema
->;
+export type GetCommunityResponse = z.infer<typeof GetCommunityResponseSchema>;
 
 export const UpdateCommunityRequestSchema = z.object({
   description: z.string(),
@@ -80,9 +72,7 @@ export type UpdateCommunityResponse = z.infer<
 >;
 
 export const GetCommunityPostsResponseSchema = z.object({
-  posts: z.array(
-    PostSchema,
-  ),
+  posts: z.array(PostSchema),
 });
 
 export type GetCommunityPostsResponse = z.infer<
@@ -95,16 +85,14 @@ export type GetCommunityPostsResponse = z.infer<
  * Returned after a user joins or leaves
  * a community.
  */
-export const CommunityMembershipResponseSchema =
-  z.object({
-    communityId: z.int().positive(),
-    joined: z.boolean(),
-  });
+export const CommunityMembershipResponseSchema = z.object({
+  communityId: z.int().positive(),
+  joined: z.boolean(),
+});
 
-export type CommunityMembershipResponse =
-  z.infer<
-    typeof CommunityMembershipResponseSchema
-  >;
+export type CommunityMembershipResponse = z.infer<
+  typeof CommunityMembershipResponseSchema
+>;
 
 /*
  * MY JOINED COMMUNITIES
@@ -112,14 +100,10 @@ export type CommunityMembershipResponse =
  * Returns all communities that the
  * currently authenticated user has joined.
  */
-export const GetJoinedCommunitiesResponseSchema =
-  z.object({
-    communities: z.array(
-      CommunitySchema,
-    ),
-  });
+export const GetJoinedCommunitiesResponseSchema = z.object({
+  communities: z.array(CommunitySchema),
+});
 
-export type GetJoinedCommunitiesResponse =
-  z.infer<
-    typeof GetJoinedCommunitiesResponseSchema
-  >;
+export type GetJoinedCommunitiesResponse = z.infer<
+  typeof GetJoinedCommunitiesResponseSchema
+>;

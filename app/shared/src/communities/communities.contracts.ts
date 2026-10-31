@@ -19,70 +19,55 @@ export const COMMUNITIES_CONTRACTS = {
   create: {
     method: HTTP_METHOD.post,
     path: COMMUNITIES_PATHS.create,
-    requestBody:
-      CreateCommunityRequestSchema,
-    responseBody:
-      CreateCommunityResponseSchema,
+    requestBody: CreateCommunityRequestSchema,
+    responseBody: CreateCommunityResponseSchema,
   },
 
   getAll: {
     method: HTTP_METHOD.get,
     path: COMMUNITIES_PATHS.getAll,
-    responseBody:
-      GetAllCommunitiesResponseSchema,
+    responseBody: GetAllCommunitiesResponseSchema,
   },
 
   getJoined: {
     method: HTTP_METHOD.get,
     path: COMMUNITIES_PATHS.getJoined,
-    responseBody:
-      GetJoinedCommunitiesResponseSchema,
+    responseBody: GetJoinedCommunitiesResponseSchema,
   },
 
   getByName: {
     method: HTTP_METHOD.get,
     path: COMMUNITIES_PATHS.getByName,
-    params:
-      CommunityNameParamsSchema,
-    responseBody:
-      GetCommunityResponseSchema,
+    params: CommunityNameParamsSchema,
+    responseBody: GetCommunityResponseSchema,
   },
 
   getPosts: {
     method: HTTP_METHOD.get,
     path: COMMUNITIES_PATHS.getPosts,
-    params:
-      CommunityNameParamsSchema,
-    responseBody:
-      GetCommunityPostsResponseSchema,
+    params: CommunityNameParamsSchema,
+    responseBody: GetCommunityPostsResponseSchema,
   },
 
   join: {
     method: HTTP_METHOD.post,
     path: COMMUNITIES_PATHS.join,
-    params:
-      CommunityNameParamsSchema,
-    responseBody:
-      CommunityMembershipResponseSchema,
+    params: CommunityNameParamsSchema,
+    responseBody: CommunityMembershipResponseSchema,
   },
 
   leave: {
     method: HTTP_METHOD.delete,
     path: COMMUNITIES_PATHS.leave,
-    params:
-      CommunityNameParamsSchema,
-    responseBody:
-      CommunityMembershipResponseSchema,
+    params: CommunityNameParamsSchema,
+    responseBody: CommunityMembershipResponseSchema,
   },
 
   update: {
     method: HTTP_METHOD.patch,
     path: COMMUNITIES_PATHS.update,
-    params:
-      CommunityNameParamsSchema,
-    requestBody:
-      UpdateCommunityRequestSchema,
-    responseBody:
-      UpdateCommunityResponseSchema,
+    params: CommunityNameParamsSchema,
+    requestBody: UpdateCommunityRequestSchema,
+    responseBody: UpdateCommunityResponseSchema,
   },
 } as const;
