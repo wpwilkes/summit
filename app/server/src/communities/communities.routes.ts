@@ -11,16 +11,11 @@ import {
   updateCommunityController,
 } from './communities.controllers.js';
 
-import {
-  COMMUNITIES_CONTRACTS,
-} from '@summit/shared';
+import { COMMUNITIES_CONTRACTS } from '@summit/shared';
 
-import {
-  Router,
-} from 'express';
+import { Router } from 'express';
 
-const communitiesRouter =
-  Router();
+const communitiesRouter = Router();
 
 /*
  * CREATE COMMUNITY

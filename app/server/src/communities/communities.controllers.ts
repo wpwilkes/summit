@@ -33,10 +33,7 @@ import {
   type UpdateCommunityResponse,
 } from '@summit/shared';
 
-import type {
-  Request,
-  Response,
-} from 'express';
+import type { Request, Response } from 'express';
 
 /*
  * CREATE COMMUNITY
@@ -45,10 +42,9 @@ export async function createCommunityController(
   request: BodyRequest<CreateCommunityRequest>,
   response: Response<CreateCommunityResponse>,
 ): Promise<void> {
-  const parsed =
-    COMMUNITIES_CONTRACTS.create.requestBody.safeParse(
-      request.body,
-    );
+  const parsed = COMMUNITIES_CONTRACTS.create.requestBody.safeParse(
+    request.body,
+  );
 
   if (!parsed.success) {
     throw new AppError(
@@ -58,15 +54,9 @@ export async function createCommunityController(
     );
   }
 
-  const result =
-    await createCommunityService(
-      parsed.data,
-      request.userId!,
-    );
+  const result = await createCommunityService(parsed.data, request.userId!);
 
-  response
-    .status(HttpStatus.CREATED)
-    .json(result);
+  response.status(HttpStatus.CREATED).json(result);
 }
 
 /*
@@ -76,12 +66,9 @@ export async function getAllCommunitiesController(
   _request: Request,
   response: Response<GetAllCommunitiesResponse>,
 ): Promise<void> {
-  const result =
-    await getAllCommunitiesService();
+  const result = await getAllCommunitiesService();
 
-  response
-    .status(HttpStatus.OK)
-    .json(result);
+  response.status(HttpStatus.OK).json(result);
 }
 
 /*
@@ -92,14 +79,9 @@ export async function getJoinedCommunitiesController(
   request: Request,
   response: Response<GetJoinedCommunitiesResponse>,
 ): Promise<void> {
-  const result =
-    await getJoinedCommunitiesService(
-      request.userId!,
-    );
+  const result = await getJoinedCommunitiesService(request.userId!);
 
-  response
-    .status(HttpStatus.OK)
-    .json(result);
+  response.status(HttpStatus.OK).json(result);
 }
 
 /*
@@ -109,10 +91,9 @@ export async function getCommunityController(
   request: ParamsRequest<CommunityNameParams>,
   response: Response<GetCommunityResponse>,
 ): Promise<void> {
-  const parsed =
-    COMMUNITIES_CONTRACTS.getByName.params.safeParse(
-      request.params,
-    );
+  const parsed = COMMUNITIES_CONTRACTS.getByName.params.safeParse(
+    request.params,
+  );
 
   if (!parsed.success) {
     throw new AppError(
@@ -122,14 +103,9 @@ export async function getCommunityController(
     );
   }
 
-  const result =
-    await getCommunityService(
-      parsed.data.name,
-    );
+  const result = await getCommunityService(parsed.data.name);
 
-  response
-    .status(HttpStatus.OK)
-    .json(result);
+  response.status(HttpStatus.OK).json(result);
 }
 
 /*
@@ -139,10 +115,9 @@ export async function getCommunityPostsController(
   request: Request<CommunityNameParams>,
   response: Response<GetCommunityPostsResponse>,
 ): Promise<void> {
-  const parsed =
-    COMMUNITIES_CONTRACTS.getPosts.params.safeParse(
-      request.params,
-    );
+  const parsed = COMMUNITIES_CONTRACTS.getPosts.params.safeParse(
+    request.params,
+  );
 
   if (!parsed.success) {
     throw new AppError(
@@ -152,14 +127,9 @@ export async function getCommunityPostsController(
     );
   }
 
-  const result =
-    await getCommunityPostsService(
-      parsed.data.name,
-    );
+  const result = await getCommunityPostsService(parsed.data.name);
 
-  response
-    .status(HttpStatus.OK)
-    .json(result);
+  response.status(HttpStatus.OK).json(result);
 }
 
 /*
@@ -169,10 +139,7 @@ export async function joinCommunityController(
   request: ParamsRequest<CommunityNameParams>,
   response: Response<CommunityMembershipResponse>,
 ): Promise<void> {
-  const parsed =
-    COMMUNITIES_CONTRACTS.join.params.safeParse(
-      request.params,
-    );
+  const parsed = COMMUNITIES_CONTRACTS.join.params.safeParse(request.params);
 
   if (!parsed.success) {
     throw new AppError(
@@ -182,15 +149,9 @@ export async function joinCommunityController(
     );
   }
 
-  const result =
-    await joinCommunityService(
-      parsed.data.name,
-      request.userId!,
-    );
+  const result = await joinCommunityService(parsed.data.name, request.userId!);
 
-  response
-    .status(HttpStatus.OK)
-    .json(result);
+  response.status(HttpStatus.OK).json(result);
 }
 
 /*
@@ -200,10 +161,7 @@ export async function leaveCommunityController(
   request: ParamsRequest<CommunityNameParams>,
   response: Response<CommunityMembershipResponse>,
 ): Promise<void> {
-  const parsed =
-    COMMUNITIES_CONTRACTS.leave.params.safeParse(
-      request.params,
-    );
+  const parsed = COMMUNITIES_CONTRACTS.leave.params.safeParse(request.params);
 
   if (!parsed.success) {
     throw new AppError(
@@ -213,41 +171,27 @@ export async function leaveCommunityController(
     );
   }
 
-  const result =
-    await leaveCommunityService(
-      parsed.data.name,
-      request.userId!,
-    );
+  const result = await leaveCommunityService(parsed.data.name, request.userId!);
 
-  response
-    .status(HttpStatus.OK)
-    .json(result);
+  response.status(HttpStatus.OK).json(result);
 }
 
 /*
  * UPDATE COMMUNITY
  */
 export async function updateCommunityController(
-  request: ParamsBodyRequest<
-    CommunityNameParams,
-    UpdateCommunityRequest
-  >,
+  request: ParamsBodyRequest<CommunityNameParams, UpdateCommunityRequest>,
   response: Response<UpdateCommunityResponse>,
 ): Promise<void> {
-  const paramsParsed =
-    COMMUNITIES_CONTRACTS.update.params.safeParse(
-      request.params,
-    );
+  const paramsParsed = COMMUNITIES_CONTRACTS.update.params.safeParse(
+    request.params,
+  );
 
-  const bodyParsed =
-    COMMUNITIES_CONTRACTS.update.requestBody.safeParse(
-      request.body,
-    );
+  const bodyParsed = COMMUNITIES_CONTRACTS.update.requestBody.safeParse(
+    request.body,
+  );
 
-  if (
-    !paramsParsed.success ||
-    !bodyParsed.success
-  ) {
+  if (!paramsParsed.success || !bodyParsed.success) {
     throw new AppError(
       HttpStatus.BAD_REQUEST,
       ErrorCode.INVALID_REQUEST,
@@ -255,14 +199,11 @@ export async function updateCommunityController(
     );
   }
 
-  const result =
-    await updateCommunityService(
-      paramsParsed.data.name,
-      request.userId!,
-      bodyParsed.data,
-    );
+  const result = await updateCommunityService(
+    paramsParsed.data.name,
+    request.userId!,
+    bodyParsed.data,
+  );
 
-  response
-    .status(HttpStatus.OK)
-    .json(result);
+  response.status(HttpStatus.OK).json(result);
 }

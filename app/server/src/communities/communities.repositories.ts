@@ -52,9 +52,7 @@ export async function getAllCommunities() {
   });
 }
 
-export async function getCommunityByName(
-  name: string,
-) {
+export async function getCommunityByName(name: string) {
   return prismaClient.community.findUnique({
     where: {
       name: name,
@@ -70,9 +68,7 @@ export async function getCommunityByName(
   });
 }
 
-export async function getCommunityById(
-  id: number,
-) {
+export async function getCommunityById(id: number) {
   return prismaClient.community.findUnique({
     where: {
       id: id,
@@ -88,9 +84,7 @@ export async function getCommunityById(
   });
 }
 
-export async function getCommunityPosts(
-  communityId: number,
-) {
+export async function getCommunityPosts(communityId: number) {
   return prismaClient.post.findMany({
     where: {
       communityId: communityId,
@@ -106,10 +100,7 @@ export async function getCommunityPosts(
   });
 }
 
-export async function updateCommunity(
-  id: number,
-  description: string,
-) {
+export async function updateCommunity(id: number, description: string) {
   return prismaClient.community.update({
     where: {
       id: id,
@@ -138,10 +129,7 @@ export async function updateCommunity(
  *
  * This prevents duplicate membership errors.
  */
-export async function joinCommunity(
-  userId: number,
-  communityId: number,
-) {
+export async function joinCommunity(userId: number, communityId: number) {
   return prismaClient.communityMembership.upsert({
     where: {
       userId_communityId: {
@@ -163,10 +151,7 @@ export async function joinCommunity(
  * deleteMany is used so leaving a community
  * that is already not joined does not crash.
  */
-export async function leaveCommunity(
-  userId: number,
-  communityId: number,
-) {
+export async function leaveCommunity(userId: number, communityId: number) {
   return prismaClient.communityMembership.deleteMany({
     where: {
       userId: userId,
@@ -178,9 +163,7 @@ export async function leaveCommunity(
 /*
  * GET COMMUNITIES JOINED BY ONE USER
  */
-export async function getJoinedCommunities(
-  userId: number,
-) {
+export async function getJoinedCommunities(userId: number) {
   return prismaClient.community.findMany({
     where: {
       memberships: {
