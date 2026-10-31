@@ -20,7 +20,7 @@ import { colors, ui } from './postsTheme';
 
 type Props = {
   initialValue?: PostInput;
-  onSubmit: (input: PostInput) => void;
+  onSubmit: (input: PostInput) => void | Promise<void>;
   onCancel: () => void;
   disabled?: boolean;
 };
@@ -36,6 +36,7 @@ export default function PostEditor({
   const [draft, setDraft] = useState<PostInput>(initialValue ?? emptyPost);
   const [error, setError] = useState('');
   const [picking, setPicking] = useState(false);
+  const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -51,6 +52,7 @@ export default function PostEditor({
   const canSubmit =
     !disabled &&
     !picking &&
+    !saving &&
     !!draft.community &&
     (!!draft.body.trim() || !!draft.photo);
 
@@ -98,18 +100,20 @@ export default function PostEditor({
     }
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (submitting.current || !canSubmit) return;
     submitting.current = true;
+    setSaving(true);
     try {
-      onSubmit(draft);
+      await onSubmit(draft);
       Keyboard.dismiss();
     } catch (cause) {
-      setError(
+      if (mounted.current) setError(
         cause instanceof Error ? cause.message : 'Unable to save your post.',
       );
     } finally {
       submitting.current = false;
+      if (mounted.current) setSaving(false);
     }
   };
 

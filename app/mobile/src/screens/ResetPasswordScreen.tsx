@@ -1,4 +1,5 @@
 import {
+  type ComponentRef,
   useEffect,
   useRef,
   useState,
@@ -90,13 +91,13 @@ export default function ResetPasswordScreen({
   ] = useState(false);
 
   const scrollViewRef =
-    useRef<ScrollView>(null);
+    useRef<ComponentRef<typeof ScrollView>>(null);
 
-  const codeRef = useRef<TextInput>(null);
+  const codeRef = useRef<ComponentRef<typeof TextInput>>(null);
   const passwordRef =
-    useRef<TextInput>(null);
+    useRef<ComponentRef<typeof TextInput>>(null);
   const confirmPasswordRef =
-    useRef<TextInput>(null);
+    useRef<ComponentRef<typeof TextInput>>(null);
 
   useEffect(() => {
     const showSubscription =

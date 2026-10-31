@@ -45,8 +45,12 @@ services:
       SERVER_BIND_ADDRESS: 0.0.0.0
       SERVER_PORT: ${SERVER_PORT}
 
+    volumes:
+      - summit_post_images:/app/server/uploads
+
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
 
 volumes:
+  summit_post_images:
   summit_postgres_data:

@@ -1,4 +1,5 @@
 import {
+  type ComponentRef,
   useEffect,
   useRef,
   useState,
@@ -57,10 +58,10 @@ export default function EmailVerificationScreen({
   const [keyboardVisible, setKeyboardVisible] =
     useState(false);
 
-  const codeInputRef = useRef<TextInput>(null);
+  const codeInputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   const scrollViewRef =
-    useRef<ScrollView>(null);
+    useRef<ComponentRef<typeof ScrollView>>(null);
 
   useEffect(() => {
     const showSubscription =

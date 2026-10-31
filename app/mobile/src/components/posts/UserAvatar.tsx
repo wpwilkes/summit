@@ -13,10 +13,10 @@ export default function UserAvatar({
   username,
   size = 36,
 }: {
-  username: string;
+  username?: string | null;
   size?: number;
 }) {
-  const name = username.trim().replace(/^u\//i, '') || '?';
+  const name = (typeof username === 'string' ? username : '').trim().replace(/^u\//i, '') || '?';
   // A repeatable color prevents avatars from changing on every render/vote.
   const hash = Array.from(name).reduce(
     (value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type ComponentRef, useRef, useState } from 'react';
 import {
   FlatList,
   Keyboard,
@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { SummitPostsService } from '../../services/summitPostsService';
+import type { BackendSummitPostsService } from '../../services/backendSummitPostsService';
 import type { SummitComment, SummitPost } from '../../types/summitPost.types';
 import ItemActionsMenu from './ItemActionsMenu';
 import PostIcon from './PostIcon';
@@ -21,7 +21,7 @@ import { colors, relativeTime, ui } from './postsTheme';
 
 type Props = {
   post: SummitPost;
-  service: SummitPostsService;
+  service: BackendSummitPostsService;
   disabled?: boolean;
   onChange: () => void;
   onClose: () => void;
@@ -41,17 +41,21 @@ export default function PostDiscussion({
   const [body, setBody] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const input = useRef<TextInput>(null);
+  const [busy, setBusy] = useState(false);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
   const comments = service.comments(post.id);
 
-  const act = (action: () => void) => {
-    if (disabled) return;
+  const act = async (action: () => Promise<void>) => {
+    if (disabled || busy) return;
+    setBusy(true);
     try {
-      action();
+      await action();
       setError('');
       onChange();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Please try again.');
+    } finally {
+      setBusy(false);
     }
   };
   const cancelEdit = () => {
@@ -60,9 +64,9 @@ export default function PostDiscussion({
     setError('');
   };
   const submitComment = () =>
-    act(() => {
-      if (editingId) service.updateComment(post.id, editingId, body);
-      else service.comment(post.id, body);
+    act(async () => {
+      if (editingId) await service.updateComment(post.id, editingId, body);
+      else await service.comment(post.id, body);
       cancelEdit();
       Keyboard.dismiss();
     });
@@ -103,11 +107,11 @@ export default function PostDiscussion({
               onEdit={onEditPost}
               onDelete={onDeletePost}
               onVote={(value) =>
-                act(() => {
-                  service.vote(post.id, value);
+                act(async () => {
+                  await service.vote(post.id, value);
                 })
               }
-              disabled={disabled}
+              disabled={disabled || busy}
             />
             <Text style={styles.commentsHeading}>
               Comments · {post.commentCount}
@@ -124,7 +128,7 @@ export default function PostDiscussion({
             <View style={ui.row}>
               <UserAvatar username={item.author} size={31} />
               <Text style={styles.username}>
-                {item.author.replace(/^u\//i, '')}
+                {(typeof item.author === 'string' ? item.author : '').replace(/^u\//i, '') || 'Unknown user'}
               </Text>
               <Text style={ui.muted}>
                 · {relativeTime(item.createdAt)}
@@ -138,11 +142,11 @@ export default function PostDiscussion({
               {item.isOwner && (
                 <ItemActionsMenu
                   subject="comment"
-                  disabled={disabled}
+                  disabled={disabled || busy}
                   onEdit={() => editComment(item)}
                   onDelete={() =>
-                    act(() => {
-                      service.removeComment(post.id, item.id);
+                    act(async () => {
+                      await service.removeComment(post.id, item.id);
                       if (editingId === item.id) cancelEdit();
                     })
                   }
@@ -153,10 +157,10 @@ export default function PostDiscussion({
                 compact
                 count={item.voteCount}
                 vote={item.userVote}
-                disabled={disabled}
+                disabled={disabled || busy}
                 onVote={(value) =>
-                  act(() => {
-                    service.voteComment(post.id, item.id, value);
+                  act(async () => {
+                    await service.voteComment(post.id, item.id, value);
                   })
                 }
               />
@@ -199,13 +203,13 @@ export default function PostDiscussion({
             }}
             maxLength={2000}
             multiline
-            editable={!disabled}
+            editable={!disabled && !busy}
           />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={editingId ? 'Save comment' : 'Submit comment'}
-            accessibilityState={{ disabled: disabled || !body.trim() }}
-            disabled={disabled || !body.trim()}
+            accessibilityState={{ disabled: disabled || busy || !body.trim() }}
+            disabled={disabled || busy || !body.trim()}
             onPress={submitComment}
             style={[
               styles.send,

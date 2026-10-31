@@ -10,6 +10,7 @@ import {
 } from './posts.controllers.js';
 import { POSTS_CONTRACTS } from '@summit/shared';
 import { Router } from 'express';
+import imagesRouter from './posts.images.js';
 
 const postsRouter = Router();
 
@@ -36,5 +37,7 @@ postsRouter.patch(
   updatePostController,
 );
 postsRouter.put(POSTS_CONTRACTS.vote.path, requireAuth, votePostController);
+
+postsRouter.use(imagesRouter);
 
 export default postsRouter;

@@ -1,4 +1,5 @@
 import {
+  type ComponentRef,
   useEffect,
   useRef,
   useState,
@@ -61,12 +62,12 @@ export default function SignupScreen({
     useState(false);
 
   const scrollViewRef =
-    useRef<ScrollView>(null);
+    useRef<ComponentRef<typeof ScrollView>>(null);
 
-  const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const emailRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
   const confirmPasswordRef =
-    useRef<TextInput>(null);
+    useRef<ComponentRef<typeof TextInput>>(null);
 
   const emailSuggestion =
     getEmailSuggestion(email);

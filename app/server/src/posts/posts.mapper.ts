@@ -10,6 +10,12 @@ export function toPostContract(post: DatabasePost): Post {
     authorId: post.authorId,
     title: post.title,
     body: post.body,
+    ...(post.photoUrl ? { photoUrl: post.photoUrl } : {}),
+    ...(post.photoWidth ? { photoWidth: post.photoWidth } : {}),
+    ...(post.photoHeight ? { photoHeight: post.photoHeight } : {}),
+    ...(post.author ? { authorUsername: post.author.username } : {}),
+    ...(post.community ? { communityName: post.community.name } : {}),
+    ...(post._count ? { commentCount: post._count.comments } : {}),
     votes: post.vote,
     createdAt: post.createdAt.toISOString(),
   };
