@@ -14,23 +14,13 @@ import {
 /*
  * AUTHENTICATION SERVICE
  *
- * Register, Login, Email Verification, and
- * Resend Verification use the real backend
+ * Register, Login, Email Verification,
+ * Resend Verification, Forgot Password,
+ * and Reset Password use the real backend
  * and the shared API contracts.
- *
- * Forgot Password and Reset Password are still
- * temporary mocks until their backend endpoints
- * are available.
  */
 
-const MOCK_VERIFICATION_CODE = '123456';
-
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
-const wait = (milliseconds: number) =>
-  new Promise<void>((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
 
 type BackendErrorObject = {
   code?: string;
@@ -73,7 +63,7 @@ function getApiBaseUrl(): string {
     throw new Error('EXPO_PUBLIC_API_URL is not configured.');
   }
 
-  return API_BASE_URL.replace(/\/$/, '');
+  return API_BASE_URL.replace(/\/+$/, '');
 }
 
 /*
@@ -85,9 +75,7 @@ function getApiBaseUrl(): string {
  * After registration succeeds, the Signup screen
  * sends the user to Email Verification.
  */
-export async function registerUser(
-  data: SignupRequest,
-): Promise<AuthResponse> {
+export async function registerUser(data: SignupRequest): Promise<AuthResponse> {
   try {
     const response = await fetch(
       `${getApiBaseUrl()}${AUTH_CONTRACTS.register.path}`,
@@ -118,15 +106,11 @@ export async function registerUser(
       AUTH_CONTRACTS.register.responseBody.safeParse(responseData);
 
     if (!parsedResponse.success) {
-      console.error(
-        'Invalid registration response:',
-        parsedResponse.error,
-      );
+      console.error('Invalid registration response:', parsedResponse.error);
 
       return {
         success: false,
-        message:
-          'Registration failed. Invalid response from the server.',
+        message: 'Registration failed. Invalid response from the server.',
       };
     }
 
@@ -150,9 +134,7 @@ export async function registerUser(
  * A user can log in only after email verification.
  * The token is returned here, not during registration.
  */
-export async function loginUser(
-  data: LoginRequest,
-): Promise<LoginResponse> {
+export async function loginUser(data: LoginRequest): Promise<LoginResponse> {
   try {
     const response = await fetch(
       `${getApiBaseUrl()}${AUTH_CONTRACTS.login.path}`,
@@ -190,15 +172,11 @@ export async function loginUser(
       AUTH_CONTRACTS.login.responseBody.safeParse(responseData);
 
     if (!parsedResponse.success) {
-      console.error(
-        'Invalid login response:',
-        parsedResponse.error,
-      );
+      console.error('Invalid login response:', parsedResponse.error);
 
       return {
         success: false,
-        message:
-          'Login failed. Invalid response from the server.',
+        message: 'Login failed. Invalid response from the server.',
       };
     }
 
@@ -254,9 +232,7 @@ export async function verifyEmail(
     }
 
     const parsedResponse =
-      AUTH_CONTRACTS.verifyEmail.responseBody.safeParse(
-        responseData,
-      );
+      AUTH_CONTRACTS.verifyEmail.responseBody.safeParse(responseData);
 
     if (!parsedResponse.success) {
       console.error(
@@ -266,8 +242,7 @@ export async function verifyEmail(
 
       return {
         success: false,
-        message:
-          'Email verification failed. Invalid response from the server.',
+        message: 'Email verification failed. Invalid response from the server.',
       };
     }
 
@@ -276,10 +251,7 @@ export async function verifyEmail(
       message: parsedResponse.data.message,
     };
   } catch (error) {
-    console.error(
-      'Real email verification request failed:',
-      error,
-    );
+    console.error('Real email verification request failed:', error);
 
     return {
       success: false,
@@ -325,9 +297,7 @@ export async function resendVerificationCode(
     }
 
     const parsedResponse =
-      AUTH_CONTRACTS.resendVerification.responseBody.safeParse(
-        responseData,
-      );
+      AUTH_CONTRACTS.resendVerification.responseBody.safeParse(responseData);
 
     if (!parsedResponse.success) {
       console.error(
@@ -347,10 +317,7 @@ export async function resendVerificationCode(
       message: parsedResponse.data.message,
     };
   } catch (error) {
-    console.error(
-      'Real resend verification request failed:',
-      error,
-    );
+    console.error('Real resend verification request failed:', error);
 
     return {
       success: false,
@@ -360,46 +327,126 @@ export async function resendVerificationCode(
 }
 
 /*
- * MOCK FORGOT PASSWORD
+ * REAL FORGOT PASSWORD
+ *
+ * Requests a password-reset code from the backend.
+ * During development, the code appears in the
+ * Docker server logs.
  */
 export async function requestPasswordReset(
   data: ForgotPasswordRequest,
 ): Promise<AuthResponse> {
-  await wait(500);
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}${AUTH_CONTRACTS.forgotPassword.path}`,
+      {
+        method: AUTH_CONTRACTS.forgotPassword.method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      },
+    );
 
-  console.log('Mock password recovery request:', {
-    email: data.email,
-  });
+    const responseData = await response.json();
 
-  return {
-    success: true,
-    message:
-      'If an account exists for this email, a recovery code was sent.',
-  };
+    if (!response.ok) {
+      const errorData = responseData as BackendErrorResponse;
+
+      return {
+        success: false,
+        message: getBackendErrorMessage(
+          errorData,
+          'Unable to request a password reset.',
+        ),
+      };
+    }
+
+    const parsedResponse =
+      AUTH_CONTRACTS.forgotPassword.responseBody.safeParse(responseData);
+
+    if (!parsedResponse.success) {
+      console.error('Invalid forgot password response:', parsedResponse.error);
+
+      return {
+        success: false,
+        message:
+          'Unable to request a password reset. Invalid response from the server.',
+      };
+    }
+
+    return {
+      success: true,
+      message: parsedResponse.data.message,
+    };
+  } catch (error) {
+    console.error('Forgot password request failed:', error);
+
+    return {
+      success: false,
+      message: 'Could not connect to the Summit server.',
+    };
+  }
 }
 
 /*
- * MOCK RESET PASSWORD
+ * REAL RESET PASSWORD
+ *
+ * Sends the email, six-digit recovery code,
+ * and new password to the backend.
  */
 export async function resetPassword(
   data: ResetPasswordRequest,
 ): Promise<AuthResponse> {
-  await wait(500);
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}${AUTH_CONTRACTS.resetPassword.path}`,
+      {
+        method: AUTH_CONTRACTS.resetPassword.method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      },
+    );
 
-  console.log('Mock reset password request:', {
-    email: data.email,
-    code: data.code,
-  });
+    const responseData = await response.json();
 
-  if (data.code !== MOCK_VERIFICATION_CODE) {
+    if (!response.ok) {
+      const errorData = responseData as BackendErrorResponse;
+
+      return {
+        success: false,
+        message: getBackendErrorMessage(
+          errorData,
+          'Unable to reset the password.',
+        ),
+      };
+    }
+
+    const parsedResponse =
+      AUTH_CONTRACTS.resetPassword.responseBody.safeParse(responseData);
+
+    if (!parsedResponse.success) {
+      console.error('Invalid reset password response:', parsedResponse.error);
+
+      return {
+        success: false,
+        message:
+          'Unable to reset the password. Invalid response from the server.',
+      };
+    }
+
+    return {
+      success: true,
+      message: parsedResponse.data.message,
+    };
+  } catch (error) {
+    console.error('Reset password request failed:', error);
+
     return {
       success: false,
-      message: 'Invalid verification code.',
+      message: 'Could not connect to the Summit server.',
     };
   }
-
-  return {
-    success: true,
-    message: 'Password reset successfully.',
-  };
 }

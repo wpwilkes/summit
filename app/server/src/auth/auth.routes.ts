@@ -1,7 +1,9 @@
 import {
+  forgotPasswordController,
   loginController,
   meController,
   registerController,
+  resetPasswordController,
 } from './auth.controllers.js';
 import { requireAuth } from './middleware/middleware.js';
 import verificationRouter from './verification/verification.routes.js';
@@ -13,6 +15,10 @@ const authRouter = Router();
 authRouter.post(AUTH_CONTRACTS.login.path, loginController);
 authRouter.get(AUTH_CONTRACTS.me.path, requireAuth, meController);
 authRouter.post(AUTH_CONTRACTS.register.path, registerController);
+
+authRouter.post(AUTH_CONTRACTS.forgotPassword.path, forgotPasswordController);
+
+authRouter.post(AUTH_CONTRACTS.resetPassword.path, resetPasswordController);
 
 authRouter.use(verificationRouter);
 
