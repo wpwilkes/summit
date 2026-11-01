@@ -1,3 +1,4 @@
+
 import { createComment } from './comments.repositories.js';
 import { Comment } from '@summit/shared';
 
@@ -9,6 +10,7 @@ export function toCommentContract(comment: DatabaseComment): Comment {
     id: comment.id,
     postId: comment.postId,
     authorId: comment.authorId,
+    authorUsername: comment.author.username,
     parentId: comment.parentId,
     body: deleted ? '[deleted]' : comment.body,
     votes: comment.vote,
