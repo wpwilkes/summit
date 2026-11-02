@@ -15,6 +15,8 @@ model User {
   createdAt              DateTime   @default(now()) @map("created_at")
   codeHash               String     @map("code_hash")
   emailVerified          Boolean    @default(false)
+  resetCodeHash      String?   @map("reset_code_hash")
+  resetCodeExpiresAt DateTime? @map("reset_code_expires_at")
 
   posts        Post[]
   comments     Comment[]
