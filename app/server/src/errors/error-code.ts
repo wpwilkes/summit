@@ -15,6 +15,9 @@ export class ErrorCode {
   static readonly INVALID_TOKEN = 'INVALID_TOKEN';
   static readonly INVALID_VERIFICATION_CODE = 'INVALID_VERIFICATION_CODE';
   static readonly INVALID_VOTE = 'INVALID_VOTE';
+  static readonly SUMMARY_FAILED = 'SUMMARY_FAILED';
+  static readonly SUMMARY_TIMEOUT = 'SUMMARY_TIMEOUT';
+  static readonly SUMMARY_UNAVAILABLE = 'SUMMARY_UNAVAILABLE';
   static readonly UNAUTHORIZED = 'UNAUTHORIZED';
   static readonly USER_ALREADY_EXISTS = 'USER_ALREADY_EXISTS';
   static readonly USERNAME_TAKEN = 'USERNAME_TAKEN';

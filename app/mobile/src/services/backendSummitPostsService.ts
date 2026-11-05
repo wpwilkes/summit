@@ -4,13 +4,15 @@ import {
   COMMUNITIES_CONTRACTS,
   POSTS_CONTRACTS,
   POSTS_PATHS,
+  SUMMARIES_CONTRACTS,
   type Comment,
   type Post,
   type Community,
+  type Summary,
 } from '@summit/shared';
 import { getAuthToken } from '../utils/tokenStorage';
 import type {
-  PostInput, PostPhoto, SummitPost, SummitComment, Vote,
+  PostInput, PostPhoto, PostSummary, SummitPost, SummitComment, Vote,
 } from '../types/summitPost.types';
 import { validatePost } from './summitPostsService';
 
@@ -124,6 +126,12 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
     userVote: commentVotes.get(String(comment.id)) ?? 0,
   });
 
+  const toSummary = (summary: Summary): PostSummary => ({
+    text: summary.summary,
+    commentCount: summary.commentCount,
+    createdAt: summary.createdAt,
+  });
+
   async function loadCommunities() {
     const data = await request<{ communities: Community[] }>(COMMUNITIES_CONTRACTS.getAll.path);
     communities = data.communities;
@@ -180,6 +188,18 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
         } catch { /* Keep comments readable if votes are temporarily unavailable. */ }
       }));
       comments.set(id, active.map(toComment));
+    },
+    /** The last saved AI summary of a post, or null if it has none yet. */
+    async summary(id: string): Promise<PostSummary | null> {
+      const data = await request<{ summary: Summary | null }>(
+        endpoint(SUMMARIES_CONTRACTS.get.path, id));
+      return data.summary ? toSummary(data.summary) : null;
+    },
+    /** Ask the server to write a new summary from the post and comments as they are now. */
+    async generateSummary(id: string): Promise<PostSummary> {
+      const data = await request<{ summary: Summary }>(
+        endpoint(SUMMARIES_CONTRACTS.generate.path, id), 'POST');
+      return toSummary(data.summary);
     },
     async create(input: PostInput): Promise<void> {
       const fields = validatePost(input);

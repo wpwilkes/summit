@@ -14,6 +14,7 @@ import type { BackendSummitPostsService } from '../../services/backendSummitPost
 import type { SummitComment, SummitPost } from '../../types/summitPost.types';
 import ItemActionsMenu from './ItemActionsMenu';
 import PostIcon from './PostIcon';
+import PostSummary from './PostSummary';
 import SummitPostCard from './SummitPostCard';
 import UserAvatar from './UserAvatar';
 import VoteControls from './VoteControls';
@@ -111,6 +112,12 @@ export default function PostDiscussion({
                   await service.vote(post.id, value);
                 })
               }
+              disabled={disabled || busy}
+            />
+            <PostSummary
+              postId={post.id}
+              commentCount={post.commentCount}
+              service={service}
               disabled={disabled || busy}
             />
             <Text style={styles.commentsHeading}>

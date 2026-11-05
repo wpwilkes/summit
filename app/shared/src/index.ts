@@ -5,3 +5,4 @@ export * from './communities/index.js';
 export * from './ping/index.js';
 export * from './posts/index.js';
 export * from './search/index.js';
+export * from './summaries/index.js';

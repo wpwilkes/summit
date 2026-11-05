@@ -36,3 +36,11 @@ export type SummitComment = {
   voteCount: number;
   userVote: Vote;
 };
+
+/** The latest AI summary of a post and its comments. */
+export type PostSummary = {
+  text: string;
+  /** How many comments the summary was written from. */
+  commentCount: number;
+  createdAt: string;
+};
