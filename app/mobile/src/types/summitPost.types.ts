@@ -10,6 +10,8 @@ export type PostInput = {
   body: string;
   community: string;
   photo?: PostPhoto;
+  /** Local display choice, never included in a backend request. */
+  isAnonymous?: boolean;
 };
 
 export type Vote = -1 | 0 | 1;
@@ -30,6 +32,8 @@ export type SummitComment = {
   postId: string;
   body: string;
   author: string;
+  /** Local display choice, never included in a backend request. */
+  isAnonymous?: boolean;
   createdAt: string;
   updatedAt: string;
   isOwner: boolean;

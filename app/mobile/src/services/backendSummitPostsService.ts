@@ -9,12 +9,15 @@ import {
   type Post,
   type Community,
   type Summary,
+  type CreatePostResponse,
+  type CreateCommentResponse,
 } from '@summit/shared';
 import { getAuthToken } from '../utils/tokenStorage';
 import type {
   PostInput, PostPhoto, PostSummary, SummitPost, SummitComment, Vote,
 } from '../types/summitPost.types';
 import { validatePost } from './summitPostsService';
+import { createAnonymousDisplayStore } from './anonymousDisplayService';
 
 export type PostsProfile = { id: number; username: string };
 
@@ -93,6 +96,37 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
   let communities: Community[] = [];
   const postVotes = new Map<string, Vote>();
   const commentVotes = new Map<string, Vote>();
+  const anonymousDisplay = createAnonymousDisplayStore(baseUrl(), profile.id);
+  const pendingVotes = new Map<string, Promise<void>>();
+  let voteRevision = 0;
+  const postVoteRevisions = new Map<string, number>();
+
+  function runVote(key: string, action: () => Promise<void>): Promise<void> {
+    const pending = pendingVotes.get(key);
+    if (pending) return pending;
+    const task = action().finally(() => { pendingVotes.delete(key); });
+    pendingVotes.set(key, task);
+    return task;
+  }
+
+  async function sendPostVote(id: string, value: -1 | 1) {
+    if (value !== -1 && value !== 1) throw new Error('Vote must be 1 or -1.');
+    const contract = POSTS_CONTRACTS;
+    // Read the current user's server vote before toggling. A stale local cache
+    // (or a failed feed vote lookup) must not turn "remove vote" into "upvote".
+    const before = contract.getVote.responseBody.safeParse(await request<unknown>(
+      endpoint(contract.getVote.path, id), contract.getVote.method,
+    ));
+    if (!before.success) throw new Error('The server returned an invalid vote. Try again.');
+    const selected: Vote = before.data.userVote === value ? 0 : value;
+    // request() above performs fetch with Bearer authentication and JSON data,
+    // following the same request pattern as authService.ts.
+    const result = contract.vote.responseBody.safeParse(await request<unknown>(
+      endpoint(contract.vote.path, id), contract.vote.method, { value: selected },
+    ));
+    if (!result.success) throw new Error('The server returned an invalid vote. Refresh and try again.');
+    return result.data;
+  }
 
   const validVote = (value: unknown): Vote => (value === -1 || value === 1 ? value : 0);
   const toPhoto = (post: Post): PostPhoto | undefined =>
@@ -108,6 +142,7 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
     author: typeof post.authorUsername === 'string' && post.authorUsername.trim()
       ? post.authorUsername : `User ${post.authorId}`,
     isOwner: post.authorId === profile.id,
+    isAnonymous: post.authorId === profile.id && anonymousDisplay.has('post', post),
     createdAt: post.createdAt,
     updatedAt: post.createdAt,
     voteCount: post.votes,
@@ -120,6 +155,7 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
     author: typeof comment.authorUsername === 'string' && comment.authorUsername.trim()
       ? comment.authorUsername : `User ${comment.authorId}`,
     isOwner: comment.authorId === profile.id && !comment.deleted,
+    isAnonymous: comment.authorId === profile.id && anonymousDisplay.has('comment', comment),
     createdAt: comment.createdAt,
     updatedAt: comment.createdAt,
     voteCount: comment.votes,
@@ -154,31 +190,46 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
     }
     return community.id;
   }
-  async function refreshPostVotes(items: Post[]) {
+  async function refreshPostVotes(items: Post[], startedRevision: number) {
     const groupSize = 8;
     for (let i = 0; i < items.length; i += groupSize) {
       await Promise.all(items.slice(i, i + groupSize).map(async (post) => {
         try {
           const data = await request<{ userVote: Vote }>(endpoint(POSTS_CONTRACTS.getVote.path, String(post.id)));
-          postVotes.set(String(post.id), validVote(data.userVote));
+          if ((postVoteRevisions.get(String(post.id)) ?? 0) <= startedRevision) {
+            postVotes.set(String(post.id), validVote(data.userVote));
+          }
         } catch { /* Public feed remains usable if individual vote lookups fail. */ }
       }));
     }
   }
   return {
+    getDisplayWarning(): string { return anonymousDisplay.warning(); },
     list(): SummitPost[] { return [...posts.values()]; },
     get(id: string): SummitPost | undefined { return posts.get(id); },
     comments(id: string): SummitComment[] { return comments.get(id) ?? []; },
     async load(): Promise<void> {
+      const startedRevision = voteRevision;
       const [all] = await Promise.all([
         request<{ posts: Post[] }>(POSTS_CONTRACTS.getAll.path),
         loadCommunities(),
+        anonymousDisplay.load(),
       ]);
-      await refreshPostVotes(all.posts);
+      await refreshPostVotes(all.posts, startedRevision);
+      const updated = all.posts.map((post) => {
+        const item = toPost(post);
+        const current = posts.get(item.id);
+        // A background refresh started before a successful vote must not
+        // overwrite the newer score returned by that vote request.
+        return current && (postVoteRevisions.get(item.id) ?? 0) > startedRevision
+          ? { ...item, userVote: current.userVote, voteCount: current.voteCount }
+          : item;
+      });
       posts.clear();
-      for (const post of all.posts) posts.set(String(post.id), toPost(post));
+      for (const post of updated) posts.set(post.id, post);
     },
     async loadComments(id: string): Promise<void> {
+      await anonymousDisplay.load();
       const data = await request<{ comments: Comment[] }>(endpoint(COMMENTS_CONTRACTS.getAllForPost.path, id));
       const active = data.comments.filter((comment) => !comment.deleted);
       await Promise.all(active.map(async (comment) => {
@@ -206,10 +257,11 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
       const communityId = await ensureCommunity(fields.community);
       const photoUrl = fields.photo ? await uploadPhoto(fields.photo) : undefined;
       const title = fields.body.slice(0, 160).trim() || 'Photo';
-      await request(POSTS_CONTRACTS.create.path, 'POST', {
+      const created = await request<CreatePostResponse>(POSTS_CONTRACTS.create.path, 'POST', {
         communityId, title, body: fields.body,
         ...(photoUrl ? { photoUrl, photoWidth: fields.photo?.width, photoHeight: fields.photo?.height } : {}),
       });
+      await anonymousDisplay.set('post', created.post, input.isAnonymous === true);
       await this.load();
     },
     async update(id: string, input: PostInput): Promise<void> {
@@ -232,33 +284,43 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
         photoWidth: fields.photo?.width ?? null,
         photoHeight: fields.photo?.height ?? null,
       });
+      await anonymousDisplay.set('post', existing, input.isAnonymous ?? existing.isAnonymous ?? false);
       await this.load();
     },
     async remove(id: string): Promise<void> {
+      const existing = posts.get(id);
       await request(endpoint(POSTS_CONTRACTS.remove.path, id), 'DELETE');
+      if (existing) await anonymousDisplay.set('post', existing, false);
       posts.delete(id);
       comments.delete(id);
       await this.load();
     },
-    async vote(id: string, value: -1 | 1): Promise<void> {
-      const before = posts.get(id)?.userVote ?? 0;
-      const selected = before === value ? 0 : value;
-      const data = await request<{ votes: number; userVote: Vote }>(
-        endpoint(POSTS_CONTRACTS.vote.path, id), 'PUT', { value: selected });
-      postVotes.set(id, validVote(data.userVote));
-      const current = posts.get(id);
-      if (current) posts.set(id, { ...current, userVote: validVote(data.userVote), voteCount: data.votes });
+    vote(id: string, value: -1 | 1): Promise<void> {
+      return runVote(`post:${id}`, async () => {
+        const data = await sendPostVote(id, value);
+        postVoteRevisions.set(id, ++voteRevision);
+        postVotes.set(id, data.userVote);
+        const current = posts.get(id);
+        if (current) posts.set(id, { ...current, userVote: data.userVote, voteCount: data.votes });
+      });
     },
-    async comment(id: string, body: string): Promise<void> {
-      await request(endpoint(COMMENTS_CONTRACTS.create.path, id), 'POST', { body: body.trim() });
+    async comment(id: string, body: string, isAnonymous = false): Promise<void> {
+      const created = await request<CreateCommentResponse>(
+        endpoint(COMMENTS_CONTRACTS.create.path, id), 'POST', { body: body.trim() });
+      await anonymousDisplay.set('comment', created.comment, isAnonymous);
       await Promise.all([this.loadComments(id), this.load()]);
     },
-    async updateComment(postId: string, id: string, body: string): Promise<void> {
+    async updateComment(postId: string, id: string, body: string, isAnonymous?: boolean): Promise<void> {
+      const existing = comments.get(postId)?.find((comment) => comment.id === id);
+      if (!existing?.isOwner) throw new Error('You can only edit your own comment.');
       await request(endpoint(COMMENTS_CONTRACTS.update.path, id), 'PATCH', { body: body.trim() });
+      await anonymousDisplay.set('comment', existing, isAnonymous ?? existing.isAnonymous ?? false);
       await this.loadComments(postId);
     },
     async removeComment(postId: string, id: string): Promise<void> {
+      const existing = comments.get(postId)?.find((comment) => comment.id === id);
       await request(endpoint(COMMENTS_CONTRACTS.remove.path, id), 'DELETE');
+      if (existing) await anonymousDisplay.set('comment', existing, false);
       await Promise.all([this.loadComments(postId), this.load()]);
     },
     async voteComment(postId: string, id: string, value: -1 | 1): Promise<void> {

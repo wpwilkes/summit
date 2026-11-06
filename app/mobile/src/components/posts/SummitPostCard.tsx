@@ -23,10 +23,13 @@ export default function SummitPostCard({
   onVote,
   disabled = false,
 }: Props) {
+  const displayName = post.isAnonymous
+    ? 'Anonymous'
+    : (typeof post.author === 'string' ? post.author : '').replace(/^u\//i, '') || 'Unknown user';
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <UserAvatar username={post.author} />
+        <UserAvatar username={displayName} />
         <View style={styles.identity}>
           <View style={ui.row}>
             <Text numberOfLines={1} style={styles.community}>
@@ -35,7 +38,7 @@ export default function SummitPostCard({
             <Text style={styles.time}>{relativeTime(post.createdAt)}</Text>
           </View>
           <Text numberOfLines={1} style={styles.username}>
-            {(typeof post.author === 'string' ? post.author : '').replace(/^u\//i, '') || 'Unknown user'}
+            {displayName}
           </Text>
         </View>
         <Pressable
@@ -70,7 +73,7 @@ export default function SummitPostCard({
         )}
         {post.photo && (
           <Image
-            accessibilityLabel={`Photo posted by ${post.author}`}
+            accessibilityLabel={`Photo posted by ${displayName}`}
             source={{ uri: post.photo.uri }}
             resizeMode="contain"
             style={[

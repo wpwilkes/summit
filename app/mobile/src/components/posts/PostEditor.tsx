@@ -15,6 +15,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import type { PostInput } from '../../types/summitPost.types';
 import CommunityPicker from './CommunityPicker';
+import AnonymousOption from './AnonymousOption';
 import PostIcon from './PostIcon';
 import { colors, ui } from './postsTheme';
 
@@ -155,6 +156,11 @@ export default function PostEditor({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[ui.constrained, styles.content]}
       >
+        <AnonymousOption
+          value={draft.isAnonymous === true}
+          onChange={(isAnonymous) => update({ isAnonymous })}
+          disabled={disabled || picking || saving}
+        />
         <TextInput
           accessibilityLabel="Post text"
           placeholder="Write your post…"

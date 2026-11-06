@@ -335,6 +335,12 @@ export default function SummitPostsScreen({
         style="dark"
       />
 
+      {!!service?.getDisplayWarning() && (
+        <Text accessibilityRole="alert" style={[ui.error, styles.error]}>
+          {service.getDisplayWarning()}
+        </Text>
+      )}
+
       {!!logoutError && (
         <Text
           accessibilityRole="alert"

@@ -13,6 +13,7 @@ import {
 import type { BackendSummitPostsService } from '../../services/backendSummitPostsService';
 import type { SummitComment, SummitPost } from '../../types/summitPost.types';
 import ItemActionsMenu from './ItemActionsMenu';
+import AnonymousOption from './AnonymousOption';
 import PostIcon from './PostIcon';
 import PostSummary from './PostSummary';
 import SummitPostCard from './SummitPostCard';
@@ -40,6 +41,7 @@ export default function PostDiscussion({
   onDeletePost,
 }: Props) {
   const [body, setBody] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -62,18 +64,20 @@ export default function PostDiscussion({
   const cancelEdit = () => {
     setEditingId(null);
     setBody('');
+    setIsAnonymous(false);
     setError('');
   };
   const submitComment = () =>
     act(async () => {
-      if (editingId) await service.updateComment(post.id, editingId, body);
-      else await service.comment(post.id, body);
+      if (editingId) await service.updateComment(post.id, editingId, body, isAnonymous);
+      else await service.comment(post.id, body, isAnonymous);
       cancelEdit();
       Keyboard.dismiss();
     });
   const editComment = (comment: SummitComment) => {
     setEditingId(comment.id);
     setBody(comment.body);
+    setIsAnonymous(comment.isAnonymous === true);
     setError('');
     input.current?.focus();
   };
@@ -130,12 +134,16 @@ export default function PostDiscussion({
             Be the first to join the conversation.
           </Text>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const displayName = item.isAnonymous
+            ? 'Anonymous'
+            : (typeof item.author === 'string' ? item.author : '').replace(/^u\//i, '') || 'Unknown user';
+          return (
           <View style={styles.comment}>
             <View style={ui.row}>
-              <UserAvatar username={item.author} size={31} />
+              <UserAvatar username={displayName} size={31} />
               <Text style={styles.username}>
-                {(typeof item.author === 'string' ? item.author : '').replace(/^u\//i, '') || 'Unknown user'}
+                {displayName}
               </Text>
               <Text style={ui.muted}>
                 · {relativeTime(item.createdAt)}
@@ -173,7 +181,8 @@ export default function PostDiscussion({
               />
             </View>
           </View>
-        )}
+          );
+        }}
       />
       <View style={[ui.constrained, styles.bottom]}>
         {!!error && (
@@ -194,6 +203,11 @@ export default function PostDiscussion({
             </Pressable>
           </View>
         )}
+        <AnonymousOption
+          value={isAnonymous}
+          onChange={setIsAnonymous}
+          disabled={disabled || busy}
+        />
         <View style={styles.composer}>
           <TextInput
             ref={input}
