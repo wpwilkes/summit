@@ -5,9 +5,10 @@ const CommentBodySchema = z.string().trim().min(1).max(10000);
 export const CommentSchema = z.object({
   id: z.int().positive(),
   postId: z.int().positive(),
-  authorId: z.int().positive(),
+  authorId: z.int().positive().optional(),
   authorUsername: z.string().optional(),
   parentId: z.int().nullable(),
+  isAnonymous: z.boolean(),
   body: CommentBodySchema,
   votes: z.int(),
   deleted: z.boolean(),
@@ -45,6 +46,7 @@ export type CommentVoteResponse = z.infer<typeof CommentVoteResponseSchema>;
 
 export const CreateCommentRequestSchema = z.object({
   body: CommentBodySchema,
+  isAnonymous: z.boolean().optional(),
 });
 export type CreateCommentRequest = z.infer<typeof CreateCommentRequestSchema>;
 

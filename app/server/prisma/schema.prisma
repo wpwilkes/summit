@@ -39,6 +39,7 @@ model Post {
   photoWidth  Int?     @map("photo_width")
   photoHeight Int?     @map("photo_height")
   createdAt   DateTime @default(now()) @map("created_at")
+  isAnonymous Boolean @default(false) @map("is_anonymous")
 
   author    User      @relation(fields: [authorId], references: [id])
   community Community @relation(fields: [communityId], references: [id])
@@ -59,6 +60,7 @@ model Comment {
   vote      Int       @default(0)
   createdAt DateTime  @default(now()) @map("created_at")
   deletedAt DateTime? @map("deleted_at")
+  isAnonymous Boolean @default(false) @map("is_anonymous")
 
   post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
   author    User      @relation(fields: [authorId], references: [id])

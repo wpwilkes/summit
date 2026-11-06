@@ -9,11 +9,16 @@ function toSearchPostResult(post: DatabaseSearchPost): SearchPostResult {
     id: post.id,
     title: post.title,
     body: post.body,
-    authorId: post.authorId,
-    authorUsername: post.author.username,
     votes: post.vote,
     commentCount: post._count.comments,
     createdAt: post.createdAt.toISOString(),
+    isAnonymous: post.isAnonymous,
+    ...(!post.isAnonymous
+      ? {
+          authorId: post.authorId,
+          authorUsername: post.author.username,
+        }
+      : {}),
   };
 }
 

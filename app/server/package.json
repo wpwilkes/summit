@@ -42,6 +42,7 @@
     "prisma:push": "dotenv run -f ../../.env -- prisma db push",
     "prisma:generate": "dotenv run -f ../../.env -- prisma generate",
     "prisma:generate:git": "prisma generate",
+    "prisma:studio": "dotenv run -f ../../.env -- prisma studio",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test",
