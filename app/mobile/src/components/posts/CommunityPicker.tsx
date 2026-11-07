@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -8,7 +9,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { POST_COMMUNITIES } from '../../services/summitPostsService';
+import type { Community } from '@summit/shared';
+import { getCommunities } from '../../services/communityService';
 import PostIcon from './PostIcon';
 import { colors, ui } from './postsTheme';
 
@@ -22,6 +24,41 @@ export default function CommunityPicker({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+
+    let active = true;
+
+    const loadCommunities = async () => {
+      setLoading(true);
+      setError('');
+
+      const result = await getCommunities();
+
+      if (!active) return;
+
+      if (!result.success) {
+        setCommunities([]);
+        setError(result.message);
+        setLoading(false);
+        return;
+      }
+
+      setCommunities(result.communities);
+      setLoading(false);
+    };
+
+    loadCommunities();
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
+
   return (
     <>
       <Pressable
@@ -39,6 +76,7 @@ export default function CommunityPicker({
         </Text>
         <PostIcon name="chevron" size={17} />
       </Pressable>
+
       <Modal
         visible={open}
         animationType="slide"
@@ -57,26 +95,49 @@ export default function CommunityPicker({
             </Pressable>
             <Text style={ui.title}>Select community</Text>
           </View>
-          <ScrollView contentContainerStyle={ui.constrained}>
-            {POST_COMMUNITIES.map((community) => (
-              <Pressable
-                key={community}
-                accessibilityRole="button"
-                accessibilityLabel={`Choose s/${community}`}
-                accessibilityState={{ selected: community === value }}
-                onPress={() => {
-                  onChange(community);
-                  setOpen(false);
-                }}
-                style={[styles.option, community === value && styles.selected]}
-              >
-                <View style={styles.symbol}>
-                  <Text style={styles.symbolText}>s/</Text>
-                </View>
-                <Text style={ui.label}>s/{community}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+
+          {loading ? (
+            <View style={styles.statusContainer}>
+              <ActivityIndicator color={colors.accent} />
+              <Text style={ui.muted}>Loading communities...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.statusContainer}>
+              <Text accessibilityRole="alert" style={ui.error}>
+                {error}
+              </Text>
+            </View>
+          ) : communities.length === 0 ? (
+            <View style={styles.statusContainer}>
+              <Text style={ui.muted}>No communities are available yet.</Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={ui.constrained}>
+              {communities.map((community) => (
+                <Pressable
+                  key={community.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Choose s/${community.name}`}
+                  accessibilityState={{
+                    selected: community.name === value,
+                  }}
+                  onPress={() => {
+                    onChange(community.name);
+                    setOpen(false);
+                  }}
+                  style={[
+                    styles.option,
+                    community.name === value && styles.selected,
+                  ]}
+                >
+                  <View style={styles.symbol}>
+                    <Text style={styles.symbolText}>s/</Text>
+                  </View>
+                  <Text style={ui.label}>s/{community.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
         </SafeAreaView>
       </Modal>
     </>
@@ -103,6 +164,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  statusContainer: {
+    minHeight: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+  },
   option: {
     minHeight: 76,
     flexDirection: 'row',
@@ -119,5 +187,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  symbolText: { fontSize: 18, fontWeight: '700', color: colors.muted },
+  symbolText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.muted,
+  },
 });

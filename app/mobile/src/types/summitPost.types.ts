@@ -30,6 +30,7 @@ export type SummitPost = PostInput & {
 export type SummitComment = {
   id: string;
   postId: string;
+  parentId?: string | null;
   body: string;
   author: string;
   /** Local display choice, never included in a backend request. */

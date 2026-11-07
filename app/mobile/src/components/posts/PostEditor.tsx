@@ -24,6 +24,7 @@ type Props = {
   onSubmit: (input: PostInput) => void | Promise<void>;
   onCancel: () => void;
   disabled?: boolean;
+  fixedCommunity?: string;
 };
 
 const emptyPost: PostInput = { body: '', community: '' };
@@ -33,23 +34,44 @@ export default function PostEditor({
   onSubmit,
   onCancel,
   disabled = false,
+  fixedCommunity,
 }: Props) {
-  const [draft, setDraft] = useState<PostInput>(initialValue ?? emptyPost);
+  const [draft, setDraft] = useState<PostInput>(() => ({
+    ...(initialValue ?? emptyPost),
+    ...(fixedCommunity ? { community: fixedCommunity } : {}),
+  }));
   const [error, setError] = useState('');
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
   const mounted = useRef(true);
+
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!fixedCommunity) return;
+
+    setDraft((current) =>
+      current.community === fixedCommunity
+        ? current
+        : { ...current, community: fixedCommunity },
+    );
+  }, [fixedCommunity]);
+
   const update = (fields: Partial<PostInput>) => {
-    setDraft((current) => ({ ...current, ...fields }));
+    setDraft((current) => ({
+      ...current,
+      ...fields,
+      ...(fixedCommunity ? { community: fixedCommunity } : {}),
+    }));
     setError('');
   };
+
   const canSubmit =
     !disabled &&
     !picking &&
@@ -61,6 +83,7 @@ export default function PostEditor({
     if (picking || disabled) return;
     setPicking(true);
     setError('');
+
     try {
       // SDK 57's system image picker needs no broad photo-library permission.
       // Only the single image the user selects is returned to this screen.
@@ -70,8 +93,10 @@ export default function PostEditor({
         allowsEditing: false,
         quality: 0.85,
       });
+
       if (mounted.current && !result.canceled) {
         const asset = result.assets[0];
+
         if (
           !asset ||
           (asset.mimeType && !asset.mimeType.startsWith('image/'))
@@ -80,6 +105,7 @@ export default function PostEditor({
             'Choose a photo. Videos and documents are not supported.',
           );
         }
+
         update({
           photo: {
             uri: asset.uri,
@@ -90,12 +116,13 @@ export default function PostEditor({
         });
       }
     } catch (cause) {
-      if (mounted.current)
+      if (mounted.current) {
         setError(
           cause instanceof Error
             ? cause.message
             : 'Unable to open your photos. Please try again.',
         );
+      }
     } finally {
       if (mounted.current) setPicking(false);
     }
@@ -103,15 +130,22 @@ export default function PostEditor({
 
   const submit = async () => {
     if (submitting.current || !canSubmit) return;
+
     submitting.current = true;
     setSaving(true);
+
     try {
-      await onSubmit(draft);
+      await onSubmit({
+        ...draft,
+        ...(fixedCommunity ? { community: fixedCommunity } : {}),
+      });
       Keyboard.dismiss();
     } catch (cause) {
-      if (mounted.current) setError(
-        cause instanceof Error ? cause.message : 'Unable to save your post.',
-      );
+      if (mounted.current) {
+        setError(
+          cause instanceof Error ? cause.message : 'Unable to save your post.',
+        );
+      }
     } finally {
       submitting.current = false;
       if (mounted.current) setSaving(false);
@@ -132,12 +166,26 @@ export default function PostEditor({
         >
           <PostIcon name="close" />
         </Pressable>
-        <CommunityPicker
-          value={draft.community}
-          onChange={(community) => update({ community })}
-          disabled={disabled || picking}
-        />
+
+        {fixedCommunity ? (
+          <View style={styles.fixedCommunity}>
+            <Text
+              numberOfLines={1}
+              style={[ui.label, styles.fixedCommunityText]}
+            >
+              s/{fixedCommunity}
+            </Text>
+          </View>
+        ) : (
+          <CommunityPicker
+            value={draft.community}
+            onChange={(community) => update({ community })}
+            disabled={disabled || picking}
+          />
+        )}
+
         <View style={ui.flex} />
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={initialValue ? 'Save post' : 'Publish post'}
@@ -151,6 +199,7 @@ export default function PostEditor({
           </Text>
         </Pressable>
       </View>
+
       <ScrollView
         style={ui.flex}
         keyboardShouldPersistTaps="handled"
@@ -161,6 +210,7 @@ export default function PostEditor({
           onChange={(isAnonymous) => update({ isAnonymous })}
           disabled={disabled || picking || saving}
         />
+
         <TextInput
           accessibilityLabel="Post text"
           placeholder="Write your post…"
@@ -174,6 +224,7 @@ export default function PostEditor({
           editable={!disabled}
           autoFocus
         />
+
         {draft.photo && (
           <View style={styles.photoContainer}>
             <Image
@@ -185,11 +236,15 @@ export default function PostEditor({
                 {
                   aspectRatio: Math.min(
                     1.8,
-                    Math.max(0.7, draft.photo.width / draft.photo.height),
+                    Math.max(
+                      0.7,
+                      draft.photo.width / draft.photo.height,
+                    ),
                   ),
                 },
               ]}
             />
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Remove photo"
@@ -201,12 +256,14 @@ export default function PostEditor({
             </Pressable>
           </View>
         )}
+
         {!!error && (
           <Text accessibilityRole="alert" style={ui.error}>
             {error}
           </Text>
         )}
       </ScrollView>
+
       <View style={[ui.constrained, styles.toolbar]}>
         <Pressable
           accessibilityRole="button"
@@ -221,10 +278,12 @@ export default function PostEditor({
           ) : (
             <PostIcon name="image" />
           )}
+
           <Text style={ui.label}>
             {draft.photo ? 'Change photo' : 'Add photo'}
           </Text>
         </Pressable>
+
         <Text style={ui.muted}>
           {draft.body.length.toLocaleString()}/10,000
         </Text>
@@ -234,7 +293,24 @@ export default function PostEditor({
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 6 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    gap: 6,
+  },
+  fixedCommunity: {
+    flexShrink: 1,
+    minHeight: 44,
+    justifyContent: 'center',
+    backgroundColor: colors.soft,
+    borderRadius: 24,
+    paddingHorizontal: 13,
+  },
+  fixedCommunityText: {
+    flexShrink: 1,
+    fontSize: 14,
+  },
   publish: {
     minHeight: 44,
     paddingHorizontal: 18,
@@ -259,7 +335,11 @@ const styles = StyleSheet.create({
     outlineWidth: 0,
   },
   photoContainer: { position: 'relative' },
-  photo: { width: '100%', backgroundColor: colors.soft, borderRadius: 18 },
+  photo: {
+    width: '100%',
+    backgroundColor: colors.soft,
+    borderRadius: 18,
+  },
   remove: {
     position: 'absolute',
     right: 12,
