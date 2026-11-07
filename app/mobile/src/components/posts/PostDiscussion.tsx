@@ -45,6 +45,10 @@ type Props = {
   service:
     BackendSummitPostsService;
 
+  joined?: boolean;
+
+  onToggleJoin?: () => void;
+
   disabled?: boolean;
 
   onChange: () => void;
@@ -59,6 +63,8 @@ type Props = {
 export default function PostDiscussion({
   post,
   service,
+  joined = false,
+  onToggleJoin,
   disabled = false,
   onChange,
   onClose,
@@ -68,14 +74,12 @@ export default function PostDiscussion({
   const [
     body,
     setBody,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     isAnonymous,
     setIsAnonymous,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     editingId,
@@ -96,20 +100,17 @@ export default function PostDiscussion({
   const [
     replyingToName,
     setReplyingToName,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     error,
     setError,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     busy,
     setBusy,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const input =
     useRef<
@@ -151,7 +152,8 @@ export default function PostDiscussion({
 
   const displayNameFor =
     (
-      comment: SummitComment,
+      comment:
+        SummitComment,
     ) =>
       comment.isAnonymous
         ? 'Anonymous'
@@ -167,7 +169,9 @@ export default function PostDiscussion({
           'Unknown user';
 
   const repliesFor =
-    (commentId: string) =>
+    (
+      commentId: string,
+    ) =>
       comments.filter(
         (comment) =>
           comment.parentId ===
@@ -207,11 +211,17 @@ export default function PostDiscussion({
 
   const resetComposer =
     () => {
-      setEditingId(null);
+      setEditingId(
+        null,
+      );
 
-      setReplyingToId(null);
+      setReplyingToId(
+        null,
+      );
 
-      setReplyingToName('');
+      setReplyingToName(
+        '',
+      );
 
       setBody('');
 
@@ -338,7 +348,9 @@ export default function PostDiscussion({
 
       return (
         <View
-          key={item.id}
+          key={
+            item.id
+          }
           style={[
             styles.commentThread,
 
@@ -498,7 +510,9 @@ export default function PostDiscussion({
           </View>
 
           {replies.map(
-            (reply) =>
+            (
+              reply,
+            ) =>
               renderComment(
                 reply,
                 depth + 1,
@@ -529,7 +543,9 @@ export default function PostDiscussion({
           onPress={
             onClose
           }
-          style={ui.iconButton}
+          style={
+            ui.iconButton
+          }
         >
           <PostIcon
             name="close"
@@ -560,13 +576,22 @@ export default function PostDiscussion({
           ui.constrained,
           styles.list,
         ]}
-        extraData={
-          post
-        }
+        extraData={[
+          post,
+          joined,
+        ]}
         ListHeaderComponent={
           <>
             <SummitPostCard
-              post={post}
+              post={
+                post
+              }
+              joined={
+                joined
+              }
+              onToggleJoin={
+                onToggleJoin
+              }
               onEdit={
                 onEditPost
               }
@@ -646,7 +671,9 @@ export default function PostDiscussion({
         {!!error && (
           <Text
             accessibilityRole="alert"
-            style={ui.error}
+            style={
+              ui.error
+            }
           >
             {error}
           </Text>
@@ -747,7 +774,9 @@ export default function PostDiscussion({
           }
         >
           <TextInput
-            ref={input}
+            ref={
+              input
+            }
             accessibilityLabel={
               editingId
                 ? 'Edit comment text'
@@ -768,7 +797,9 @@ export default function PostDiscussion({
             style={
               styles.input
             }
-            value={body}
+            value={
+              body
+            }
             onChangeText={(
               value,
             ) => {
@@ -877,7 +908,8 @@ const styles =
       padding: 24,
       color: colors.muted,
       fontSize: 15,
-      textAlign: 'center',
+      textAlign:
+        'center',
     },
 
     commentThread: {
@@ -914,7 +946,8 @@ const styles =
 
     commentActions: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems:
+        'center',
       minHeight: 44,
     },
 

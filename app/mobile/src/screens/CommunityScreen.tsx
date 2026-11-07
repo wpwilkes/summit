@@ -663,6 +663,12 @@ export default function CommunityScreen({
           service={
             postService
           }
+          joined={
+            joined
+          }
+          onToggleJoin={() => {
+            void toggleJoin();
+          }}
           onChange={() => {
             setDiscussionRevision(
               (current) =>
