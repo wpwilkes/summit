@@ -78,7 +78,13 @@ export async function createCommentService(
   data: CreateCommentRequest,
 ): Promise<CreateCommentResponse> {
   await requireExistingPost(postId);
-  const comment = await createComment(postId, userId, data.body);
+  const comment = await createComment(
+    postId,
+    userId,
+    data.body,
+    null,
+    data.isAnonymous,
+  );
   return {
     comment: toCommentContract(comment),
   };
@@ -95,6 +101,7 @@ export async function createReplyService(
     userId,
     data.body,
     parent.id,
+    data.isAnonymous,
   );
   return {
     comment: toCommentContract(reply),

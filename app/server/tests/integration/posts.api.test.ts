@@ -420,3 +420,57 @@ test('PUT returns 404 for a nonexistent post', async () => {
   assert.equal(response.status, 404);
   assert.equal(response.body.error.code, 'POST_NOT_FOUND');
 });
+
+test('anonymous posts stay attributed internally but hide the author in public APIs', async () => {
+  const author = await _registerUser();
+  const otherUser = await _registerUser();
+  const communityId = await _createCommunity(author.token);
+  const title = `Anonymous ${randomUUID()}`;
+
+  const created = await request(app)
+    .post('/api/posts')
+    .set('Authorization', `Bearer ${author.token}`)
+    .send({ communityId, title, body: 'Private identity.', isAnonymous: true });
+  assert.equal(created.status, 201);
+  const post = created.body.post;
+  assert.equal(post.isAnonymous, true);
+  assert.equal('authorId' in post, false);
+  assert.equal('authorUsername' in post, false);
+
+  const byId = await request(app).get(`/api/posts/${post.id}`);
+  assert.equal(byId.status, 200);
+  assert.equal(byId.body.post.isAnonymous, true);
+  assert.equal('authorId' in byId.body.post, false);
+  assert.equal('authorUsername' in byId.body.post, false);
+
+  const feed = await request(app).get('/api/posts');
+  const feedPost = feed.body.posts.find(
+    (item: { id: number }) => item.id === post.id,
+  );
+  assert.ok(feedPost);
+  assert.equal('authorId' in feedPost, false);
+  assert.equal('authorUsername' in feedPost, false);
+
+  const search = await request(app)
+    .get('/api/search/posts')
+    .query({ q: title });
+  assert.equal(search.status, 200);
+  assert.equal(search.body.posts.length, 1);
+  assert.equal(search.body.posts[0].isAnonymous, true);
+  assert.equal('authorId' in search.body.posts[0], false);
+  assert.equal('authorUsername' in search.body.posts[0], false);
+
+  const ownerUpdate = await request(app)
+    .patch(`/api/posts/${post.id}`)
+    .set('Authorization', `Bearer ${author.token}`)
+    .send({ title: `${title} edited` });
+  assert.equal(ownerUpdate.status, 200);
+  assert.equal(ownerUpdate.body.post.isAnonymous, true);
+  assert.equal('authorId' in ownerUpdate.body.post, false);
+
+  const otherUpdate = await request(app)
+    .patch(`/api/posts/${post.id}`)
+    .set('Authorization', `Bearer ${otherUser.token}`)
+    .send({ title: 'Not mine' });
+  _assertApiError(otherUpdate, 403, 'FORBIDDEN');
+});

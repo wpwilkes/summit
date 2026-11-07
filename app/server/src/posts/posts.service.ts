@@ -58,6 +58,7 @@ export async function createPostService(
       photoWidth: data.photoWidth,
       photoHeight: data.photoHeight,
     },
+    data.isAnonymous,
   );
   return {
     post: toPostContract(post),

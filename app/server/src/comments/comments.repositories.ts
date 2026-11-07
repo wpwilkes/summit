@@ -25,6 +25,7 @@ export async function createComment(
   authorId: number,
   body: string,
   parentId: number | null = null,
+  isAnonymous: boolean = false,
 ) {
   return prismaClient.comment.create({
     data: {
@@ -32,6 +33,7 @@ export async function createComment(
       authorId,
       body,
       parentId,
+      isAnonymous,
     },
     include: commentAuthor,
   });

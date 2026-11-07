@@ -8,12 +8,17 @@ export function toCommentContract(comment: DatabaseComment): Comment {
   return {
     id: comment.id,
     postId: comment.postId,
-    authorId: comment.authorId,
-    authorUsername: comment.author.username,
+    ...(!comment.isAnonymous
+      ? {
+          authorId: comment.authorId,
+          authorUsername: comment.author.username,
+        }
+      : {}),
     parentId: comment.parentId,
     body: deleted ? '[deleted]' : comment.body,
     votes: comment.vote,
     deleted,
     createdAt: comment.createdAt.toISOString(),
+    isAnonymous: comment.isAnonymous,
   };
 }

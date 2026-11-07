@@ -14,9 +14,10 @@ export const PostSchema = z.object({
   authorUsername: z.string().optional(),
   communityName: z.string().optional(),
   commentCount: z.int().nonnegative().optional(),
-  authorId: z.int().positive(),
+  authorId: z.int().positive().optional(),
   votes: z.int(),
   createdAt: z.iso.datetime(),
+  isAnonymous: z.boolean(),
 });
 export type Post = z.infer<typeof PostSchema>;
 
@@ -30,6 +31,7 @@ export const CreatePostRequestSchema = z
     communityId: z.int().positive(),
     title: z.string().nonempty(),
     body: z.string(),
+    isAnonymous: z.boolean().optional(),
     photoUrl: z
       .string()
       .regex(/^\/api\/posts\/images\/[0-9a-f-]+\.(jpg|png|webp)$/)

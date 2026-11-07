@@ -6,11 +6,12 @@ export const SearchPostResultSchema = z.object({
   id: z.int().positive(),
   title: z.string().nonempty(),
   body: z.string().nonempty(),
-  authorId: z.int().positive(),
-  authorUsername: z.string().nonempty(),
+  authorId: z.int().positive().optional(),
+  authorUsername: z.string().nonempty().optional(),
   votes: z.int(),
   commentCount: z.int().nonnegative(),
   createdAt: z.iso.datetime(),
+  isAnonymous: z.boolean(),
 });
 export type SearchPostResult = z.infer<typeof SearchPostResultSchema>;
 

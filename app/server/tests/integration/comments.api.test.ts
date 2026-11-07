@@ -285,3 +285,86 @@ test('PATCH rejects edits to a deleted comment', async () => {
     .send({ body: 'Edited after deletion' });
   _assertApiError(response, 409, 'COMMENT_DELETED');
 });
+
+test('POST creates an anonymous comment', async () => {
+  const user = await _registerUser();
+  const post = await _createPost(user.token);
+
+  const response = await request(app)
+    .post(`/api/posts/${post.id}/comments`)
+    .set('Authorization', `Bearer ${user.token}`)
+    .send({
+      body: 'Anonymous comment',
+      isAnonymous: true,
+    });
+
+  assert.equal(response.status, 201);
+
+  const comment = response.body.comment;
+  assert.equal(comment.isAnonymous, true);
+  assert.equal(comment.body, 'Anonymous comment');
+  assert.equal('authorId' in comment, false);
+  assert.equal('authorUsername' in comment, false);
+
+  const getResponse = await request(app).get(`/api/posts/${post.id}/comments`);
+
+  assert.equal(getResponse.status, 200);
+
+  const retrieved = getResponse.body.comments.find(
+    (c: { id: number }) => c.id === comment.id,
+  );
+
+  assert.ok(retrieved);
+  assert.equal(retrieved.isAnonymous, true);
+  assert.equal('authorId' in retrieved, false);
+  assert.equal('authorUsername' in retrieved, false);
+
+  const updateResponse = await request(app)
+    .patch(`/api/comments/${comment.id}`)
+    .set('Authorization', `Bearer ${user.token}`)
+    .send({ body: 'Updated anonymous comment' });
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updateResponse.body.comment.isAnonymous, true);
+  assert.equal('authorId' in updateResponse.body.comment, false);
+  assert.equal('authorUsername' in updateResponse.body.comment, false);
+});
+
+test('POST creates an anonymous reply', async () => {
+  const user = await _registerUser();
+  const post = await _createPost(user.token);
+  const parent = await _createComment(post.id, user.token);
+
+  const response = await request(app)
+    .post(`/api/comments/${parent.id}/replies`)
+    .set('Authorization', `Bearer ${user.token}`)
+    .send({
+      body: 'Anonymous reply',
+      isAnonymous: true,
+    });
+
+  assert.equal(response.status, 201);
+
+  const reply = response.body.comment;
+  assert.equal(reply.isAnonymous, true);
+  assert.equal(reply.parentId, parent.id);
+  assert.equal('authorId' in reply, false);
+  assert.equal('authorUsername' in reply, false);
+
+  const getResponse = await request(app).get(`/api/posts/${post.id}/comments`);
+
+  assert.equal(getResponse.status, 200);
+
+  const comments = getResponse.body.comments;
+  const retrievedParent = comments.find(
+    (c: { id: number }) => c.id === parent.id,
+  );
+  const retrievedReply = comments.find(
+    (c: { id: number }) => c.id === reply.id,
+  );
+  assert.equal(retrievedParent.isAnonymous, false);
+  assert.equal(retrievedParent.authorId, user.id);
+  assert.equal(retrievedReply.isAnonymous, true);
+  assert.equal('authorId' in retrievedReply, false);
+  assert.equal('authorUsername' in retrievedReply, false);
+});
