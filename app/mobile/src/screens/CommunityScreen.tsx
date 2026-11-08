@@ -12,7 +12,9 @@ import {
   View,
 } from 'react-native';
 
-import { StatusBar } from 'expo-status-bar';
+import {
+  StatusBar,
+} from 'expo-status-bar';
 
 import {
   SafeAreaView,
@@ -27,6 +29,8 @@ import type {
   Post,
 } from '@summit/shared';
 
+import PostDiscussion from '../components/posts/PostDiscussion';
+import PostEditor from '../components/posts/PostEditor';
 import PostIcon from '../components/posts/PostIcon';
 
 import {
@@ -43,8 +47,17 @@ import {
 } from '../services/communityService';
 
 import {
+  createBackendSummitPostsService,
+  type BackendSummitPostsService,
+} from '../services/backendSummitPostsService';
+
+import {
   recordRecentCommunity,
 } from '../services/recentCommunitiesService';
+
+import {
+  getPostsProfile,
+} from '../services/summitProfileService';
 
 import type {
   RootStackParamList,
@@ -68,39 +81,94 @@ export default function CommunityScreen({
   const [
     community,
     setCommunity,
-  ] = useState<Community | null>(
-    null,
-  );
+  ] =
+    useState<Community | null>(
+      null,
+    );
 
   const [
     posts,
     setPosts,
-  ] = useState<Post[]>([]);
+  ] =
+    useState<Post[]>([]);
 
   const [
     loading,
     setLoading,
-  ] = useState(true);
+  ] =
+    useState(true);
 
   const [
     errorMessage,
     setErrorMessage,
-  ] = useState('');
+  ] =
+    useState('');
 
   const [
     joined,
     setJoined,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const [
     joinErrorMessage,
     setJoinErrorMessage,
-  ] = useState('');
+  ] =
+    useState('');
 
   const [
     membershipLoading,
     setMembershipLoading,
-  ] = useState(false);
+  ] =
+    useState(false);
+
+  const [
+    postService,
+    setPostService,
+  ] =
+    useState<
+      BackendSummitPostsService | null
+    >(null);
+
+  const [
+    postCreateError,
+    setPostCreateError,
+  ] =
+    useState('');
+
+  const [
+    creatingPost,
+    setCreatingPost,
+  ] =
+    useState(false);
+
+  const [
+    selectedPostId,
+    setSelectedPostId,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
+    editingPostId,
+    setEditingPostId,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
+    openingDiscussion,
+    setOpeningDiscussion,
+  ] =
+    useState(false);
+
+  const [
+    discussionRevision,
+    setDiscussionRevision,
+  ] =
+    useState(0);
 
   const displayName =
     community?.name ??
@@ -110,6 +178,48 @@ export default function CommunityScreen({
     displayName
       .charAt(0)
       .toUpperCase();
+
+  const selectedPost =
+    postService &&
+    selectedPostId
+      ? postService.get(
+          selectedPostId,
+        )
+      : undefined;
+
+  const editingPost =
+    postService &&
+    editingPostId
+      ? postService.get(
+          editingPostId,
+        )
+      : undefined;
+
+  const refreshCommunityPosts =
+    async (
+      name =
+        community?.name ??
+        communityName,
+    ) => {
+      const result =
+        await getCommunityPosts(
+          name,
+        );
+
+      if (result.success) {
+        setPosts(
+          result.posts,
+        );
+
+        return true;
+      }
+
+      setPostCreateError(
+        result.message,
+      );
+
+      return false;
+    };
 
   useEffect(() => {
     recordRecentCommunity({
@@ -129,24 +239,27 @@ export default function CommunityScreen({
     const loadCommunity =
       async () => {
         setLoading(true);
+
         setErrorMessage('');
+
         setJoinErrorMessage('');
 
         const [
           communityResult,
           postsResult,
           joinedResult,
-        ] = await Promise.all([
-          getCommunity(
-            communityName,
-          ),
+        ] =
+          await Promise.all([
+            getCommunity(
+              communityName,
+            ),
 
-          getCommunityPosts(
-            communityName,
-          ),
+            getCommunityPosts(
+              communityName,
+            ),
 
-          getJoinedCommunities(),
-        ]);
+            getJoinedCommunities(),
+          ]);
 
         if (!active) {
           return;
@@ -156,7 +269,9 @@ export default function CommunityScreen({
           !communityResult.success
         ) {
           setCommunity(null);
+
           setPosts([]);
+
           setJoined(false);
 
           setErrorMessage(
@@ -164,6 +279,7 @@ export default function CommunityScreen({
           );
 
           setLoading(false);
+
           return;
         }
 
@@ -188,7 +304,8 @@ export default function CommunityScreen({
             joinedResult.communities.some(
               (item) =>
                 item.id ===
-                communityResult.community.id,
+                communityResult
+                  .community.id,
             );
 
           setJoined(
@@ -212,6 +329,58 @@ export default function CommunityScreen({
     };
   }, [communityName]);
 
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    getPostsProfile(
+      controller.signal,
+    )
+      .then(
+        (profile) => {
+          if (
+            controller.signal
+              .aborted
+          ) {
+            return;
+          }
+
+          setPostService(
+            createBackendSummitPostsService(
+              profile,
+            ),
+          );
+
+          setPostCreateError(
+            '',
+          );
+        },
+      )
+      .catch(
+        (cause) => {
+          if (
+            controller.signal
+              .aborted
+          ) {
+            return;
+          }
+
+          setPostService(null);
+
+          setPostCreateError(
+            cause instanceof
+              Error
+              ? cause.message
+              : 'Unable to prepare the post service.',
+          );
+        },
+      );
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
   const toggleJoin =
     async () => {
       if (
@@ -221,23 +390,32 @@ export default function CommunityScreen({
         return;
       }
 
-      setMembershipLoading(true);
-      setJoinErrorMessage('');
+      setMembershipLoading(
+        true,
+      );
 
-      const result = joined
-        ? await leaveCommunity(
-            community.name,
-          )
-        : await joinCommunity(
-            community.name,
-          );
+      setJoinErrorMessage(
+        '',
+      );
+
+      const result =
+        joined
+          ? await leaveCommunity(
+              community.name,
+            )
+          : await joinCommunity(
+              community.name,
+            );
 
       if (!result.success) {
         setJoinErrorMessage(
           result.message,
         );
 
-        setMembershipLoading(false);
+        setMembershipLoading(
+          false,
+        );
+
         return;
       }
 
@@ -245,16 +423,285 @@ export default function CommunityScreen({
         result.joined,
       );
 
-      setMembershipLoading(false);
+      setMembershipLoading(
+        false,
+      );
     };
+
+  const openDiscussion =
+    async (
+      postId: string | number,
+    ) => {
+      if (
+        !postService ||
+        openingDiscussion
+      ) {
+        return;
+      }
+
+      setOpeningDiscussion(
+        true,
+      );
+
+      setPostCreateError(
+        '',
+      );
+
+      try {
+        const id =
+          String(postId);
+
+        /*
+         * The community endpoint gives us
+         * the post ID. The Posts service
+         * loads the full SummitPost needed
+         * by PostDiscussion.
+         */
+        await postService.load();
+
+        const post =
+          postService.get(id);
+
+        if (!post) {
+          throw new Error(
+            'Unable to open this post.',
+          );
+        }
+
+        await postService.loadComments(
+          id,
+        );
+
+        setSelectedPostId(
+          id,
+        );
+
+        setDiscussionRevision(
+          (current) =>
+            current + 1,
+        );
+      } catch (cause) {
+        setPostCreateError(
+          cause instanceof
+            Error
+            ? cause.message
+            : 'Unable to open this discussion.',
+        );
+      } finally {
+        setOpeningDiscussion(
+          false,
+        );
+      }
+    };
+
+  const closeDiscussion =
+    () => {
+      setSelectedPostId(
+        null,
+      );
+
+      setEditingPostId(
+        null,
+      );
+
+      void refreshCommunityPosts();
+    };
+
+  const deleteSelectedPost =
+    async () => {
+      if (
+        !postService ||
+        !selectedPost
+      ) {
+        return;
+      }
+
+      try {
+        await postService.remove(
+          selectedPost.id,
+        );
+
+        setSelectedPostId(
+          null,
+        );
+
+        setEditingPostId(
+          null,
+        );
+
+        await refreshCommunityPosts();
+      } catch (cause) {
+        setPostCreateError(
+          cause instanceof
+            Error
+            ? cause.message
+            : 'Unable to delete this post.',
+        );
+      }
+    };
+
+  if (
+    creatingPost &&
+    community &&
+    postService
+  ) {
+    return (
+      <SafeAreaView
+        style={ui.page}
+      >
+        <StatusBar
+          style="dark"
+        />
+
+        <PostEditor
+          fixedCommunity={
+            community.name
+          }
+          onCancel={() =>
+            setCreatingPost(
+              false,
+            )
+          }
+          onSubmit={async (
+            input,
+          ) => {
+            await postService.create(
+              {
+                ...input,
+
+                community:
+                  community.name,
+              },
+            );
+
+            await refreshCommunityPosts(
+              community.name,
+            );
+
+            setCreatingPost(
+              false,
+            );
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (
+    editingPost &&
+    community &&
+    postService
+  ) {
+    return (
+      <SafeAreaView
+        style={ui.page}
+      >
+        <StatusBar
+          style="dark"
+        />
+
+        <PostEditor
+          initialValue={
+            editingPost
+          }
+          fixedCommunity={
+            community.name
+          }
+          onCancel={() =>
+            setEditingPostId(
+              null,
+            )
+          }
+          onSubmit={async (
+            input,
+          ) => {
+            await postService.update(
+              editingPost.id,
+              {
+                ...input,
+
+                community:
+                  community.name,
+              },
+            );
+
+            await refreshCommunityPosts(
+              community.name,
+            );
+
+            setEditingPostId(
+              null,
+            );
+
+            setDiscussionRevision(
+              (current) =>
+                current + 1,
+            );
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (
+    selectedPost &&
+    postService
+  ) {
+    return (
+      <SafeAreaView
+        style={ui.page}
+      >
+        <StatusBar
+          style="dark"
+        />
+
+        <PostDiscussion
+          key={`${selectedPost.id}-${discussionRevision}`}
+          post={
+            selectedPost
+          }
+          service={
+            postService
+          }
+          joined={
+            joined
+          }
+          onToggleJoin={() => {
+            void toggleJoin();
+          }}
+          onChange={() => {
+            setDiscussionRevision(
+              (current) =>
+                current + 1,
+            );
+          }}
+          onClose={
+            closeDiscussion
+          }
+          onEditPost={() =>
+            setEditingPostId(
+              selectedPost.id,
+            )
+          }
+          onDeletePost={() => {
+            void deleteSelectedPost();
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
       style={ui.page}
     >
-      <StatusBar style="dark" />
+      <StatusBar
+        style="dark"
+      />
 
-      <View style={styles.header}>
+      <View
+        style={styles.header}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
@@ -268,7 +715,9 @@ export default function CommunityScreen({
 
         <Text
           numberOfLines={1}
-          style={styles.headerTitle}
+          style={
+            styles.headerTitle
+          }
         >
           s/{displayName}
         </Text>
@@ -317,7 +766,9 @@ export default function CommunityScreen({
           }
         >
           <View
-            style={styles.banner}
+            style={
+              styles.banner
+            }
           />
 
           <View
@@ -390,7 +841,9 @@ export default function CommunityScreen({
           ) : null}
 
           <View
-            style={styles.details}
+            style={
+              styles.details
+            }
           >
             <Text
               style={
@@ -408,13 +861,15 @@ export default function CommunityScreen({
               {community.description ||
                 'No description available.'}
             </Text>
+
             <Text
               style={
                 styles.memberCount
               }
             >
               {community.memberCount}{' '}
-              {community.memberCount === 1
+              {community.memberCount ===
+              1
                 ? 'member'
                 : 'members'}
             </Text>
@@ -438,9 +893,80 @@ export default function CommunityScreen({
             >
               Posts
             </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Create a post in ${community.name}`}
+              accessibilityState={{
+                disabled:
+                  !postService,
+              }}
+              disabled={
+                !postService
+              }
+              onPress={() => {
+                setPostCreateError(
+                  '',
+                );
+
+                setCreatingPost(
+                  true,
+                );
+              }}
+              style={[
+                styles.createPostButton,
+
+                !postService &&
+                  styles.createPostButtonDisabled,
+              ]}
+            >
+              <Text
+                style={
+                  styles.createPostButtonText
+                }
+              >
+                {postService
+                  ? 'Create Post'
+                  : 'Preparing...'}
+              </Text>
+            </Pressable>
           </View>
 
-          {posts.length === 0 ? (
+          {postCreateError ? (
+            <Text
+              accessibilityRole="alert"
+              style={
+                styles.postCreateErrorText
+              }
+            >
+              {postCreateError}
+            </Text>
+          ) : null}
+
+          {openingDiscussion ? (
+            <View
+              style={
+                styles.openingDiscussion
+              }
+            >
+              <ActivityIndicator
+                color={
+                  colors.accent
+                }
+              />
+
+              <Text
+                style={
+                  styles.statusText
+                }
+              >
+                Opening discussion...
+              </Text>
+            </View>
+          ) : null}
+
+          {posts.length ===
+          0 ? (
             <View
               style={
                 styles.emptyPosts
@@ -478,11 +1004,29 @@ export default function CommunityScreen({
             >
               {posts.map(
                 (post) => (
-                  <View
-                    key={post.id}
-                    style={
-                      styles.postCard
+                  <Pressable
+                    key={
+                      post.id
                     }
+                    accessibilityRole="button"
+                    accessibilityLabel="Open post discussion"
+                    disabled={
+                      openingDiscussion ||
+                      !postService
+                    }
+                    onPress={() => {
+                      void openDiscussion(
+                        post.id,
+                      );
+                    }}
+                    style={({
+                      pressed,
+                    }) => [
+                      styles.postCard,
+
+                      pressed &&
+                        styles.postCardPressed,
+                    ]}
                   >
                     <Text
                       style={
@@ -500,15 +1044,43 @@ export default function CommunityScreen({
                       {post.body}
                     </Text>
 
-                    <Text
+                    <View
                       style={
-                        styles.postMeta
+                        styles.postMetaRow
                       }
                     >
-                      {post.votes}{' '}
-                      votes
-                    </Text>
-                  </View>
+                      <Text
+                        style={
+                          styles.postMeta
+                        }
+                      >
+                        {post.votes}{' '}
+                        votes
+                      </Text>
+
+                      <View
+                        style={
+                          styles.openDiscussionLabel
+                        }
+                      >
+                        <PostIcon
+                          name="comment"
+                          size={17}
+                          color={
+                            colors.muted
+                          }
+                        />
+
+                        <Text
+                          style={
+                            styles.postMeta
+                          }
+                        >
+                          Open discussion
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
                 ),
               )}
             </View>
@@ -548,7 +1120,8 @@ const styles =
     statusContainer: {
       flex: 1,
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent:
+        'center',
       gap: 12,
       paddingHorizontal: 24,
     },
@@ -671,6 +1244,11 @@ const styles =
     postsHeader: {
       paddingHorizontal: 16,
       paddingTop: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'space-between',
+      gap: 12,
     },
 
     sectionTitle: {
@@ -679,9 +1257,48 @@ const styles =
       fontWeight: '700',
     },
 
+    createPostButton: {
+      minHeight: 38,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      backgroundColor:
+        colors.accent,
+    },
+
+    createPostButtonDisabled: {
+      opacity: 0.5,
+    },
+
+    createPostButtonText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '700',
+    },
+
+    postCreateErrorText: {
+      color: '#c62828',
+      fontSize: 13,
+      paddingHorizontal: 16,
+      paddingTop: 10,
+    },
+
+    openingDiscussion: {
+      minHeight: 70,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      gap: 10,
+      paddingHorizontal: 16,
+    },
+
     emptyPosts: {
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent:
+        'center',
       gap: 10,
       minHeight: 250,
       paddingHorizontal: 24,
@@ -705,6 +1322,10 @@ const styles =
         colors.border,
     },
 
+    postCardPressed: {
+      opacity: 0.65,
+    },
+
     postTitle: {
       color: colors.text,
       fontSize: 17,
@@ -718,10 +1339,24 @@ const styles =
       lineHeight: 20,
     },
 
+    postMetaRow: {
+      marginTop: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'space-between',
+      gap: 12,
+    },
+
     postMeta: {
-      marginTop: 8,
       color: colors.muted,
       fontSize: 12,
+    },
+
+    openDiscussionLabel: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
     },
 
     memberCount: {

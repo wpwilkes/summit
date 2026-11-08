@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
@@ -38,6 +39,12 @@ import {
   getRecentCommunities,
   type RecentCommunity,
 } from '../services/recentCommunitiesService';
+
+import {
+  getJoinedCommunities,
+  joinCommunity,
+  leaveCommunity,
+} from '../services/communityService';
 
 import {
   createBackendSummitPostsService,
@@ -107,8 +114,15 @@ export default function SummitPostsScreen({
     setRetry,
   ] = useState(0);
 
-  const [busy, setBusy] = useState(false);
-  const [loadingFeed, setLoadingFeed] = useState(false);
+  const [
+    busy,
+    setBusy,
+  ] = useState(false);
+
+  const [
+    loadingFeed,
+    setLoadingFeed,
+  ] = useState(false);
 
   const [
     revision,
@@ -149,11 +163,151 @@ export default function SummitPostsScreen({
     setError,
   ] = useState('');
 
+  const [
+    joinedCommunityNames,
+    setJoinedCommunityNames,
+  ] =
+    useState<string[]>(
+      [],
+    );
+
+  /*
+   * Internal protection only.
+   *
+   * This is not displayed in the UI.
+   * It stops duplicate membership
+   * requests if the button is tapped
+   * several times very quickly.
+   */
+  const membershipRequest =
+    useRef<string | null>(
+      null,
+    );
+
   const refresh = () =>
     setRevision(
       (value) =>
         value + 1,
     );
+
+  const normalizeCommunityName = (
+    name: string,
+  ) =>
+    name
+      .trim()
+      .toLowerCase();
+
+  const isCommunityJoined = (
+    name: string,
+  ) =>
+    joinedCommunityNames.includes(
+      normalizeCommunityName(
+        name,
+      ),
+    );
+
+  const loadMemberships =
+    async () => {
+      const result =
+        await getJoinedCommunities();
+
+      if (!result.success) {
+        return;
+      }
+
+      setJoinedCommunityNames(
+        result.communities.map(
+          (community) =>
+            normalizeCommunityName(
+              community.name,
+            ),
+        ),
+      );
+    };
+
+  const toggleCommunityJoin =
+    async (
+      communityName: string,
+    ) => {
+      const normalized =
+        normalizeCommunityName(
+          communityName,
+        );
+
+      if (
+        !normalized ||
+        membershipRequest.current
+      ) {
+        return;
+      }
+
+      membershipRequest.current =
+        normalized;
+
+      setError('');
+
+      try {
+        const currentlyJoined =
+          joinedCommunityNames.includes(
+            normalized,
+          );
+
+        const result =
+          currentlyJoined
+            ? await leaveCommunity(
+                communityName,
+              )
+            : await joinCommunity(
+                communityName,
+              );
+
+        if (
+          !result.success
+        ) {
+          setError(
+            result.message,
+          );
+
+          return;
+        }
+
+        setJoinedCommunityNames(
+          (current) => {
+            if (
+              result.joined
+            ) {
+              if (
+                current.includes(
+                  normalized,
+                )
+              ) {
+                return current;
+              }
+
+              return [
+                ...current,
+                normalized,
+              ];
+            }
+
+            return current.filter(
+              (name) =>
+                name !==
+                normalized,
+            );
+          },
+        );
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : 'Unable to update community membership.',
+        );
+      } finally {
+        membershipRequest.current =
+          null;
+      }
+    };
 
   useEffect(() => {
     let active = true;
@@ -168,15 +322,32 @@ export default function SummitPostsScreen({
         12000,
       );
 
-    getPostsProfile(controller.signal)
-      .then(async (profile) => {
-        const backendService = createBackendSummitPostsService(profile);
-        await backendService.load();
-        if (active) {
-          setService(backendService);
-          setProfileError('');
-        }
-      })
+    getPostsProfile(
+      controller.signal,
+    )
+      .then(
+        async (profile) => {
+          const backendService =
+            createBackendSummitPostsService(
+              profile,
+            );
+
+          await Promise.all([
+            backendService.load(),
+            loadMemberships(),
+          ]);
+
+          if (active) {
+            setService(
+              backendService,
+            );
+
+            setProfileError(
+              '',
+            );
+          }
+        },
+      )
       .catch(
         (cause) => {
           if (active) {
@@ -268,64 +439,200 @@ export default function SummitPostsScreen({
       });
   };
 
-  const loadFeed = async (current = service) => {
-    if (!current || loggingOut) return;
-    setLoadingFeed(true);
-    try {
-      await current.load();
-      if (selectedId) await current.loadComments(selectedId);
-      refresh();
-      setError('');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not refresh posts.');
-    } finally {
-      setLoadingFeed(false);
-    }
-  };
+  const loadFeed =
+    async (
+      current = service,
+    ) => {
+      if (
+        !current ||
+        loggingOut
+      ) {
+        return;
+      }
 
-  // Reload when opening a discussion; other users may have replied since the last visit.
+      setLoadingFeed(
+        true,
+      );
+
+      try {
+        await Promise.all([
+          current.load(),
+          loadMemberships(),
+        ]);
+
+        if (
+          selectedId
+        ) {
+          await current.loadComments(
+            selectedId,
+          );
+        }
+
+        refresh();
+
+        setError('');
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : 'Could not refresh posts.',
+        );
+      } finally {
+        setLoadingFeed(
+          false,
+        );
+      }
+    };
+
+  /*
+   * Reload discussion comments when
+   * opening a post.
+   */
   useEffect(() => {
-    if (!service || !selectedId) return;
+    if (
+      !service ||
+      !selectedId
+    ) {
+      return;
+    }
+
     let current = true;
-    service.loadComments(selectedId)
-      .then(() => { if (current) refresh(); })
-      .catch((cause) => { if (current) setError(cause instanceof Error ? cause.message : 'Unable to load comments.'); });
-    return () => { current = false; };
-  }, [service, selectedId]);
 
-  // Poll while this screen is mounted so users on other devices see new posts.
+    service
+      .loadComments(
+        selectedId,
+      )
+      .then(() => {
+        if (current) {
+          refresh();
+        }
+      })
+      .catch(
+        (cause) => {
+          if (current) {
+            setError(
+              cause instanceof Error
+                ? cause.message
+                : 'Unable to load comments.',
+            );
+          }
+        },
+      );
+
+    return () => {
+      current = false;
+    };
+  }, [
+    service,
+    selectedId,
+  ]);
+
+  /*
+   * Poll while the screen is mounted
+   * so posts/comments from other
+   * devices can appear.
+   */
   useEffect(() => {
-    if (!service) return;
-    const interval = setInterval(() => {
-      Promise.all([service.load(), ...(selectedId ? [service.loadComments(selectedId)] : [])])
-        .then(() => refresh())
-        .catch(() => { /* Keep last successful feed visible during transient outages. */ });
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [service, selectedId]);
-
-  const act = async (action: () => Promise<void>) => {
-    if (loggingOut || busy) return;
-    setBusy(true);
-    try {
-      await action();
-      refresh();
-      setError('');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Please try again.');
-    } finally {
-      setBusy(false);
+    if (!service) {
+      return;
     }
-  };
 
-  const deletePost = (id: string) => act(async () => {
-    if (!service) return;
-    await service.remove(id);
-    setSelectedId(null);
-    setEditor(null);
-  });
+    const interval =
+      setInterval(() => {
+        Promise.all([
+          service.load(),
 
-  const selectedPost = service && selectedId ? service.get(selectedId) : null;
+          loadMemberships(),
+
+          ...(selectedId
+            ? [
+                service.loadComments(
+                  selectedId,
+                ),
+              ]
+            : []),
+        ])
+          .then(() =>
+            refresh(),
+          )
+          .catch(() => {
+            /*
+             * Keep the last successful
+             * information visible.
+             */
+          });
+      }, 15000);
+
+    return () =>
+      clearInterval(
+        interval,
+      );
+  }, [
+    service,
+    selectedId,
+  ]);
+
+  const act =
+    async (
+      action:
+        () => Promise<void>,
+    ) => {
+      if (
+        loggingOut ||
+        busy
+      ) {
+        return;
+      }
+
+      setBusy(true);
+
+      try {
+        await action();
+
+        refresh();
+
+        setError('');
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : 'Please try again.',
+        );
+      } finally {
+        setBusy(false);
+      }
+    };
+
+  const deletePost = (
+    id: string,
+  ) =>
+    act(
+      async () => {
+        if (!service) {
+          return;
+        }
+
+        await service.remove(
+          id,
+        );
+
+        setSelectedId(
+          null,
+        );
+
+        setEditor(
+          null,
+        );
+      },
+    );
+
+  const selectedPost =
+    service &&
+    selectedId
+      ? service.get(
+          selectedId,
+        )
+      : null;
 
   return (
     <SafeAreaView
@@ -336,8 +643,16 @@ export default function SummitPostsScreen({
       />
 
       {!!service?.getDisplayWarning() && (
-        <Text accessibilityRole="alert" style={[ui.error, styles.error]}>
-          {service.getDisplayWarning()}
+        <Text
+          accessibilityRole="alert"
+          style={[
+            ui.error,
+            styles.error,
+          ]}
+        >
+          {
+            service.getDisplayWarning()
+          }
         </Text>
       )}
 
@@ -372,7 +687,13 @@ export default function SummitPostsScreen({
             editor.id ??
             'new'
           }
-          initialValue={editor.id ? service.get(editor.id) : undefined}
+          initialValue={
+            editor.id
+              ? service.get(
+                  editor.id,
+                )
+              : undefined
+          }
           disabled={
             loggingOut
           }
@@ -381,11 +702,20 @@ export default function SummitPostsScreen({
               null,
             )
           }
-          onSubmit={async (input) => {
-            if (editor.id) {
-              await service.update(editor.id, input);
+          onSubmit={async (
+            input,
+          ) => {
+            if (
+              editor.id
+            ) {
+              await service.update(
+                editor.id,
+                input,
+              );
             } else {
-              await service.create(input);
+              await service.create(
+                input,
+              );
             }
 
             if (
@@ -415,10 +745,22 @@ export default function SummitPostsScreen({
           service={
             service
           }
+          joined={
+            isCommunityJoined(
+              selectedPost.community,
+            )
+          }
+          onToggleJoin={() => {
+            void toggleCommunityJoin(
+              selectedPost.community,
+            );
+          }}
           disabled={
             loggingOut
           }
-          onChange={refresh}
+          onChange={
+            refresh
+          }
           onClose={() =>
             setSelectedId(
               null,
@@ -529,14 +871,19 @@ export default function SummitPostsScreen({
             </View>
           ) : (
             <FlatList
-              refreshing={loadingFeed}
-              onRefresh={() => { void loadFeed(); }}
+              refreshing={
+                loadingFeed
+              }
+              onRefresh={() => {
+                void loadFeed();
+              }}
               data={
                 service.list()
               }
-              extraData={
-                revision
-              }
+              extraData={[
+                revision,
+                joinedCommunityNames,
+              ]}
               keyExtractor={(
                 post,
               ) =>
@@ -592,8 +939,19 @@ export default function SummitPostsScreen({
                     item
                   }
                   disabled={
-                    loggingOut || busy
+                    loggingOut ||
+                    busy
                   }
+                  joined={
+                    isCommunityJoined(
+                      item.community,
+                    )
+                  }
+                  onToggleJoin={() => {
+                    void toggleCommunityJoin(
+                      item.community,
+                    );
+                  }}
                   onOpen={() =>
                     setSelectedId(
                       item.id,
@@ -616,9 +974,14 @@ export default function SummitPostsScreen({
                   onVote={(
                     value,
                   ) =>
-                    act(async () => {
-                      await service.vote(item.id, value);
-                    })
+                    act(
+                      async () => {
+                        await service.vote(
+                          item.id,
+                          value,
+                        );
+                      },
+                    )
                   }
                 />
               )}
@@ -654,7 +1017,9 @@ export default function SummitPostsScreen({
             null,
           );
 
-          setEditor(null);
+          setEditor(
+            null,
+          );
 
           onPopularPress();
         }}
@@ -667,7 +1032,9 @@ export default function SummitPostsScreen({
             null,
           );
 
-          setEditor(null);
+          setEditor(
+            null,
+          );
 
           onNewsPress();
         }}
@@ -680,7 +1047,9 @@ export default function SummitPostsScreen({
             null,
           );
 
-          setEditor(null);
+          setEditor(
+            null,
+          );
 
           onDiscoverCommunitiesPress();
         }}
@@ -693,7 +1062,9 @@ export default function SummitPostsScreen({
             null,
           );
 
-          setEditor(null);
+          setEditor(
+            null,
+          );
 
           onStartCommunityPress();
         }}
@@ -708,7 +1079,9 @@ export default function SummitPostsScreen({
             null,
           );
 
-          setEditor(null);
+          setEditor(
+            null,
+          );
 
           onRecentCommunityPress(
             community,

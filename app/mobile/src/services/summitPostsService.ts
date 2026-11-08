@@ -32,15 +32,26 @@ function validatePhoto(photo?: PostPhoto): PostPhoto | undefined {
 
 export function validatePost(input: PostInput): PostInput {
   const body = typeof input.body === 'string' ? input.body.trim() : '';
+  const community =
+    typeof input.community === 'string' ? input.community.trim() : '';
   const photo = validatePhoto(input.photo);
+
   if (!body && !photo) throw new Error('Write a message or add a photo.');
   if (body.length > 10000) {
     throw new Error('Post content must be 10000 characters or fewer.');
   }
-  if (!POST_COMMUNITIES.some((item) => item === input.community)) {
+  if (!community) {
     throw new Error('Select a valid community.');
   }
-  return { body, community: input.community, photo };
+
+  return {
+    body,
+    community,
+    photo,
+    ...(input.isAnonymous !== undefined
+      ? { isAnonymous: input.isAnonymous }
+      : {}),
+  };
 }
 
 function validateComment(body: string): string {
