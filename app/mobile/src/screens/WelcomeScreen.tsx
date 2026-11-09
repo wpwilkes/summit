@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -85,6 +86,14 @@ export default function WelcomeScreen({
               I already have an account
             </Text>
           </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/resources/about')}
+              style={styles.resourcesLink}
+            >
+              <Text style={styles.resourcesLinkText}>About Summit & resources</Text>
+            </Pressable>
         </View>
       </SafeAreaView>
     </ImageBackground>
@@ -92,6 +101,15 @@ export default function WelcomeScreen({
 }
 
 const styles = StyleSheet.create({
+  resourcesLink: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+  },
+  resourcesLinkText: { color: '#1a1a1b', fontSize: 14, fontWeight: '600' },
   background: {
     flex: 1,
     width: '100%',
