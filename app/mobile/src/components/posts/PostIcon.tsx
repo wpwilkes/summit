@@ -48,6 +48,16 @@ const paths = {
   send: 'm12 4-7 7M12 4l7 7M12 4v16',
 
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm5 12 5 5',
+
+  info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 11v6M12 7h.01',
+
+  shield: 'm12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Zm-4 9 3 3 5-6',
+
+  document: 'M14 3H5v18h14V8l-5-5ZM14 3v5h5M8 12h8M8 16h6',
+
+  briefcase: 'M8 7V4h8v3M3 7h18v13H3V7Zm0 5c5 3 13 3 18 0M12 11v5',
+
+  arrow: 'M4 12h16m-6-6 6 6-6 6',
 } as const;
 
 export type PostIconName =

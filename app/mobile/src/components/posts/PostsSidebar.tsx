@@ -41,6 +41,7 @@ import type {
 } from '../../types/navigation.types';
 
 import PostIcon from './PostIcon';
+import ResourcesMenu from '../resources/ResourcesMenu';
 
 import {
   colors,
@@ -459,6 +460,10 @@ export default function PostsSidebar({
             <View
               style={ui.separator}
             />
+
+            <ResourcesMenu onClose={onClose} disabled={loggingOut} />
+
+            <View style={ui.separator} />
 
             <Pressable
               accessibilityRole="button"

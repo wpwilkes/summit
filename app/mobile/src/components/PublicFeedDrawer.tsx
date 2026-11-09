@@ -1,10 +1,13 @@
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import ResourcesMenu from './resources/ResourcesMenu';
 
 type Props = {
   visible: boolean;
@@ -36,7 +39,8 @@ export default function PublicFeedDrawer({
           accessibilityLabel="Close menu"
         />
 
-        <View style={styles.drawer}>
+        <SafeAreaView style={styles.drawer} edges={['top', 'bottom']}>
+          <ScrollView contentContainerStyle={styles.drawerContent} showsVerticalScrollIndicator={false}>
           {/* Drawer Header */}
 
           <View style={styles.drawerHeader}>
@@ -90,14 +94,11 @@ export default function PublicFeedDrawer({
             </Text>
           </Pressable>
 
-          <Pressable
-            style={styles.menuItem}
-            onPress={onClose}
-          >
-            <Text style={styles.menuItemText}>
-              About Summit
-            </Text>
-          </Pressable>
+          <View style={styles.divider} />
+
+          <View style={styles.resources}>
+            <ResourcesMenu dark onClose={onClose} />
+          </View>
 
           <View style={styles.divider} />
 
@@ -172,7 +173,8 @@ export default function PublicFeedDrawer({
               Create Account
             </Text>
           </Pressable>
-        </View>
+          </ScrollView>
+        </SafeAreaView>
       </View>
     </Modal>
   );
@@ -200,10 +202,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#151517',
     borderRightWidth: 1,
     borderRightColor: '#303034',
-    paddingTop: 54,
+  },
+
+  drawerContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
+    paddingTop: 12,
     paddingBottom: 24,
   },
+
+  resources: { marginHorizontal: -20 },
 
   drawerHeader: {
     flexDirection: 'row',
