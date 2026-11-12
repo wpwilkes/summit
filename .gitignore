@@ -67,3 +67,4 @@ app/server/uploads/
 .env.production.*
 web-dist/
 summit-web.tar.gz
+.env.demo-seed
