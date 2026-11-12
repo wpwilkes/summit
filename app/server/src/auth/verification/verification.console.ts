@@ -8,7 +8,6 @@ export function sendVerificationCode(email: string, code: string): void {
   console.log('\n========== SUMMIT EMAIL VERIFICATION ==========');
   console.log(`Email: ${email}`);
   console.log(`Code: ${code}`);
-  console.log('Expires in 10 minutes.');
   console.log('================================================\n');
 }
 

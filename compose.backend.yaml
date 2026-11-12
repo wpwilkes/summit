@@ -35,6 +35,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       SERVER_BIND_ADDRESS: 0.0.0.0
       SERVER_PORT: "3000"
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: google/gemini-2.5-flash-lite
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
