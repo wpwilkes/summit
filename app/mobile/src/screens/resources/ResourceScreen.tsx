@@ -106,7 +106,7 @@ export default function ResourceScreen({ page }: { page: ResourcePage }) {
     }
   };
 
-  const isHeroPage = page === 'about' || page === 'careers';
+
 
   return (
     <SafeAreaView
@@ -174,7 +174,7 @@ export default function ResourceScreen({ page }: { page: ResourcePage }) {
         contentInsetAdjustmentBehavior="never"
       >
         <View ref={content} collapsable={false} style={styles.main}>
-          {isHeroPage ? (
+          {page === 'about' ? (
             <View style={styles.hero}>
               <View style={[styles.heroInner, wide && styles.heroInnerWide]}>
                 <View style={styles.heroCopy}>
@@ -219,7 +219,7 @@ export default function ResourceScreen({ page }: { page: ResourcePage }) {
                 />
               </View>
             </View>
-          ) : (
+              ) : page === 'careers' ? null : (
             <View style={styles.policyHero}>
               <View
                 style={[
@@ -243,15 +243,7 @@ export default function ResourceScreen({ page }: { page: ResourcePage }) {
                       : 'A shared understanding for a better place to connect.'}
                   </Text>
                 </View>
-                {!compact && (
-                  <View style={[styles.badge, wide && styles.badgeWide]}>
-                    <PostIcon
-                      name={page === 'rules' ? 'shield' : 'document'}
-                      size={wide ? 56 : 30}
-                      color="#a93200"
-                    />
-                  </View>
-                )}
+ 
               </View>
             </View>
           )}
@@ -599,11 +591,7 @@ export default function ResourceScreen({ page }: { page: ResourcePage }) {
                   <Text accessibilityRole="header" style={styles.cardTitle}>
                     No open positions right now
                   </Text>
-                  <Text style={styles.body}>
-                    Summit is currently a student-built project. There are no
-                    advertised jobs or applications to submit. Future
-                    opportunities can be listed here as the project grows.
-                  </Text>
+
                   <Button
                     label="Get to know Summit"
                     dark
@@ -647,13 +635,7 @@ export default function ResourceScreen({ page }: { page: ResourcePage }) {
                 ))}
               </View>
               <View style={styles.footerBottom}>
-                <Text style={styles.footerNote}>
-                  A place to share, connect, and belong.
-                </Text>
-                <Text style={styles.footerNote}>
-                  Summit · A student community project. Inspired by Reddit; not
-                  affiliated with Reddit.
-                </Text>
+
               </View>
             </View>
           </View>
