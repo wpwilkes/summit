@@ -8,6 +8,7 @@ import {
   loginService,
   registerService,
   resetPasswordService,
+  updateMeService,
 } from './auth.services.js';
 import {
   AUTH_CONTRACTS,
@@ -21,6 +22,8 @@ import {
   type ForgotPasswordResponse,
   type ResetPasswordRequest,
   type ResetPasswordResponse,
+  type UpdateMeRequest,
+  type UpdateMeResponse,
 } from '@summit/shared';
 import type { Response } from 'express';
 
@@ -45,6 +48,25 @@ export async function meController(
   response: Response<MeResponse>,
 ): Promise<void> {
   const result = await getMe(request.userId!);
+  response.status(HttpStatus.OK).json(result);
+}
+
+export async function updateMeController(
+  request: BodyRequest<UpdateMeRequest>,
+  response: Response<UpdateMeResponse>,
+): Promise<void> {
+  const parsed = AUTH_CONTRACTS.updateMe.requestBody.safeParse(request.body);
+
+  if (!parsed.success) {
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      ErrorCode.INVALID_REQUEST,
+      'Invalid profile update request.',
+    );
+  }
+
+  const result = await updateMeService(request.userId!, parsed.data);
+
   response.status(HttpStatus.OK).json(result);
 }
 

@@ -9,6 +9,7 @@ import {
   findById,
   findByUsername,
   savePasswordResetCode,
+  updateUsername,
 } from './auth.repositories.js';
 import { createToken } from './auth.token.js';
 import type {
@@ -21,6 +22,8 @@ import type {
   RegisterResponse,
   ResetPasswordRequest,
   ResetPasswordResponse,
+  UpdateMeRequest,
+  UpdateMeResponse,
 } from '@summit/shared';
 import { createVerificationCode } from './verification/verification.code.js';
 import { sendVerificationCode } from './verification/verification.console.js';
@@ -80,7 +83,40 @@ export async function getMe(userId: number): Promise<MeResponse> {
     user: toUserContract(user),
   };
 }
+export async function updateMeService(
+  userId: number,
+  request: UpdateMeRequest,
+): Promise<UpdateMeResponse> {
+  const username = request.username.trim();
 
+  const currentUser = await findById(userId);
+
+  if (!currentUser) {
+    throw new AppError(
+      HttpStatus.NOT_FOUND,
+      ErrorCode.USER_NOT_FOUND,
+      'User not found.',
+    );
+  }
+
+  if (username !== currentUser.username) {
+    const existingUsername = await findByUsername(username);
+
+    if (existingUsername) {
+      throw new AppError(
+        HttpStatus.CONFLICT,
+        ErrorCode.USERNAME_TAKEN,
+        'Username already taken.',
+      );
+    }
+  }
+
+  const updatedUser = await updateUsername(userId, username);
+
+  return {
+    user: toUserContract(updatedUser),
+  };
+}
 export async function registerService(
   request: RegisterRequest,
 ): Promise<RegisterResponse> {

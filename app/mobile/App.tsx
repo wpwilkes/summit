@@ -42,6 +42,9 @@ import CommunityScreen from './src/screens/CommunityScreen';
 import StartCommunityScreen from './src/screens/StartCommunityScreen';
 import SearchScreen from './src/screens/SearchScreen';
 
+import ProfileScreen from './src/screens/ProfileScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
+
 import type {
   RootStackParamList,
 } from './src/types/navigation.types';
@@ -283,6 +286,22 @@ export default function App() {
             component={
               StartCommunityScreen
             }
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
             options={{
               headerShown: false,
             }}

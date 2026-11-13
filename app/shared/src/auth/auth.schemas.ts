@@ -28,6 +28,18 @@ export const MeResponseSchema = z.object({
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;
 
+export const UpdateMeRequestSchema = z.object({
+  username: z.string().trim().min(3).max(30),
+});
+
+export type UpdateMeRequest = z.infer<typeof UpdateMeRequestSchema>;
+
+export const UpdateMeResponseSchema = z.object({
+  user: UserSchema,
+});
+
+export type UpdateMeResponse = z.infer<typeof UpdateMeResponseSchema>;
+
 export const RegisterRequestSchema = z.object({
   email: z.email(),
   username: z.string().min(3).max(30),

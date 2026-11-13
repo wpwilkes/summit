@@ -40,5 +40,9 @@ export type RootStackParamList = {
 
   StartCommunity: undefined;
 
+  Profile: undefined;
+
+  EditProfile: undefined;
+
   Search: undefined;
 };
