@@ -28,6 +28,17 @@ export async function findByUsername(username: string) {
   return prismaClient.user.findUnique({ where: { username: username } });
 }
 
+export async function updateUsername(userId: number, username: string) {
+  return prismaClient.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      username,
+    },
+  });
+}
+
 /*
  * PASSWORD RESET
  *

@@ -461,7 +461,36 @@ export default function PostsSidebar({
               style={ui.separator}
             />
 
-            <ResourcesMenu onClose={onClose} disabled={loggingOut} />
+            <View style={ui.separator} />
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open profile"
+              disabled={loggingOut}
+              onPress={() => {
+                onClose();
+                navigation.navigate('Profile');
+              }}
+              style={styles.item}
+            >
+              <PostIcon
+                name="profile"
+                color={colors.muted}
+              />
+
+              <Text
+                style={styles.label}
+              >
+                Profile
+              </Text>
+            </Pressable>
+
+            <View style={ui.separator} />
+
+            <ResourcesMenu
+              onClose={onClose}
+              disabled={loggingOut}
+            />
 
             <View style={ui.separator} />
 

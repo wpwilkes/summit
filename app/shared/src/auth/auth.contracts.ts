@@ -13,6 +13,8 @@ import {
   ResendVerificationResponseSchema,
   ResetPasswordRequestSchema,
   ResetPasswordResponseSchema,
+  UpdateMeRequestSchema,
+  UpdateMeResponseSchema,
   VerifyEmailRequestSchema,
   VerifyEmailResponseSchema,
 } from './auth.schemas.js';
@@ -35,6 +37,12 @@ export const AUTH_CONTRACTS = {
     path: AUTH_PATHS.me,
     requestBody: MeRequestSchema,
     responseBody: MeResponseSchema,
+  },
+  updateMe: {
+    method: HTTP_METHOD.patch,
+    path: AUTH_PATHS.me,
+    requestBody: UpdateMeRequestSchema,
+    responseBody: UpdateMeResponseSchema,
   },
   register: {
     method: HTTP_METHOD.post,
