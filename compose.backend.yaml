@@ -36,7 +36,9 @@ services:
       SERVER_BIND_ADDRESS: 0.0.0.0
       SERVER_PORT: "3000"
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      OPENROUTER_MODEL: google/gemini-2.5-flash-lite
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL}
+      ENABLE_DEMO_MODE: ${ENABLE_DEMO_MODE}
+      DEMO_MODE_CODE: ${DEMO_MODE_CODE}
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
