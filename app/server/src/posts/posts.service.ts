@@ -61,23 +61,26 @@ export async function createPostService(
     data.isAnonymous,
   );
   return {
-    post: toPostContract(post),
+    post: toPostContract(post, userId),
   };
 }
 
-export async function getAllPostsService(): Promise<GetAllPostsResponse> {
+export async function getAllPostsService(
+  viewerId?: number,
+): Promise<GetAllPostsResponse> {
   const posts = await getAllPosts();
   return {
-    posts: posts.map(toPostContract),
+    posts: posts.map((post) => toPostContract(post, viewerId)),
   };
 }
 
 export async function getByIdPostService(
   postId: number,
+  viewerId?: number,
 ): Promise<GetByIdPostResponse> {
   const post = await requireExistingPost(postId);
   return {
-    post: toPostContract(post),
+    post: toPostContract(post, viewerId),
   };
 }
 
@@ -129,7 +132,7 @@ export async function updatePostService(
   }
   const updatedPost = await updatePost(postId, data);
   return {
-    post: toPostContract(updatedPost),
+    post: toPostContract(updatedPost, userId),
   };
 }
 

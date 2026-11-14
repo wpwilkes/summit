@@ -149,10 +149,14 @@ export async function setCommentVote(
   );
 }
 
-export async function updateCommentById(commentId: number, body: string) {
+export async function updateCommentById(
+  commentId: number,
+  body: string,
+  isAnonymous?: boolean,
+) {
   return prismaClient.comment.update({
     where: { id: commentId },
-    data: { body },
+    data: { body, ...(isAnonymous === undefined ? {} : { isAnonymous }) },
     include: commentAuthor,
   });
 }

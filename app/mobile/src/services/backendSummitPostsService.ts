@@ -27,7 +27,6 @@ import type {
 } from '../types/summitPost.types';
 
 import { validatePost } from './summitPostsService';
-import { createAnonymousDisplayStore } from './anonymousDisplayService';
 
 export type PostsProfile = { id: number; username: string };
 
@@ -153,7 +152,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
   const postVotes = new Map<string, Vote>();
   const commentVotes = new Map<string, Vote>();
 
-  const anonymousDisplay = createAnonymousDisplayStore(baseUrl(), profile.id);
 
   const pendingVotes = new Map<string, Promise<void>>();
   let voteRevision = 0;
@@ -241,15 +239,12 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
         : (communities.find((community) => community.id === post.communityId)
             ?.name ?? 'unknown'),
     photo: toPhoto(post),
-    author:
-      typeof post.authorUsername === 'string' &&
-      post.authorUsername.trim()
-        ? post.authorUsername
-        : `User ${post.authorId}`,
-    isOwner: post.authorId === profile.id,
-    isAnonymous:
-      post.authorId === profile.id &&
-      anonymousDisplay.has('post', post),
+    author: post.isAnonymous
+      ? 'Anonymous'
+      : (post.authorUsername?.trim() || 'Unknown user'),
+    isOwner: post.isOwner === true ||
+      (post.authorId !== undefined && post.authorId === profile.id),
+    isAnonymous: post.isAnonymous === true,
     createdAt: post.createdAt,
     updatedAt: post.createdAt,
     voteCount: post.votes,
@@ -269,20 +264,13 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
         : String(comment.parentId),
 
     body: comment.body ?? '',
-    author:
-      typeof comment.authorUsername === 'string' &&
-      comment.authorUsername.trim()
-        ? comment.authorUsername
-        : `User ${comment.authorId}`,
-    isOwner:
-      comment.authorId === profile.id &&
-      !comment.deleted,
-    isAnonymous:
-      comment.authorId === profile.id &&
-      anonymousDisplay.has(
-        'comment',
-        comment,
-      ),
+    author: comment.isAnonymous
+      ? 'Anonymous'
+      : (comment.authorUsername?.trim() || 'Unknown user'),
+    isOwner: !comment.deleted &&
+      (comment.isOwner === true ||
+        (comment.authorId !== undefined && comment.authorId === profile.id)),
+    isAnonymous: comment.isAnonymous === true,
     createdAt: comment.createdAt,
     updatedAt: comment.createdAt,
     voteCount: comment.votes,
@@ -394,7 +382,7 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
 
   return {
     getDisplayWarning(): string {
-      return anonymousDisplay.warning();
+      return '';
     },
 
     list(): SummitPost[] {
@@ -417,7 +405,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
           POSTS_CONTRACTS.getAll.path,
         ),
         loadCommunities(),
-        anonymousDisplay.load(),
       ]);
 
       await refreshPostVotes(
@@ -455,7 +442,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
     },
 
     async loadComments(id: string): Promise<void> {
-      await anonymousDisplay.load();
 
       const data = await request<{
         comments: Comment[];
@@ -556,14 +542,14 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
           .slice(0, 160)
           .trim() || 'Photo';
 
-      const created =
-        await request<CreatePostResponse>(
+      await request<CreatePostResponse>(
           POSTS_CONTRACTS.create.path,
           'POST',
           {
             communityId,
             title,
             body: fields.body,
+            isAnonymous: input.isAnonymous === true,
 
             ...(photoUrl
               ? {
@@ -578,12 +564,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
               : {}),
           },
         );
-
-      await anonymousDisplay.set(
-        'post',
-        created.post,
-        input.isAnonymous === true,
-      );
 
       await this.load();
     },
@@ -642,6 +622,7 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
               .trim() || 'Photo',
           body: fields.body,
           communityId,
+          isAnonymous: input.isAnonymous ?? existing.isAnonymous ?? false,
           photoUrl,
           photoWidth:
             fields.photo?.width ??
@@ -652,23 +633,12 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
         },
       );
 
-      await anonymousDisplay.set(
-        'post',
-        existing,
-        input.isAnonymous ??
-          existing.isAnonymous ??
-          false,
-      );
-
       await this.load();
     },
 
     async remove(
       id: string,
     ): Promise<void> {
-      const existing =
-        posts.get(id);
-
       await request(
         endpoint(
           POSTS_CONTRACTS.remove.path,
@@ -676,14 +646,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
         ),
         'DELETE',
       );
-
-      if (existing) {
-        await anonymousDisplay.set(
-          'post',
-          existing,
-          false,
-        );
-      }
 
       posts.delete(id);
       comments.delete(id);
@@ -735,8 +697,7 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
       body: string,
       isAnonymous = false,
     ): Promise<void> {
-      const created =
-        await request<CreateCommentResponse>(
+      await request<CreateCommentResponse>(
           endpoint(
             COMMENTS_CONTRACTS.create.path,
             id,
@@ -747,12 +708,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
             isAnonymous,
           },
         );
-
-      await anonymousDisplay.set(
-        'comment',
-        created.comment,
-        isAnonymous,
-      );
 
       await Promise.all([
         this.loadComments(id),
@@ -769,8 +724,7 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
       const contract =
         COMMENTS_CONTRACTS.createReply;
 
-      const created =
-        await request<CreateReplyResponse>(
+      await request<CreateReplyResponse>(
           endpoint(
             contract.path,
             parentId,
@@ -781,12 +735,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
             isAnonymous,
           },
         );
-
-      await anonymousDisplay.set(
-        'comment',
-        created.comment,
-        isAnonymous,
-      );
 
       await Promise.all([
         this.loadComments(
@@ -824,15 +772,8 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
         'PATCH',
         {
           body: body.trim(),
+          ...(isAnonymous === undefined ? {} : { isAnonymous }),
         },
-      );
-
-      await anonymousDisplay.set(
-        'comment',
-        existing,
-        isAnonymous ??
-          existing.isAnonymous ??
-          false,
       );
 
       await this.loadComments(
@@ -844,14 +785,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
       postId: string,
       id: string,
     ): Promise<void> {
-      const existing =
-        comments
-          .get(postId)
-          ?.find(
-            (comment) =>
-              comment.id === id,
-          );
-
       await request(
         endpoint(
           COMMENTS_CONTRACTS.remove.path,
@@ -859,14 +792,6 @@ export function createBackendSummitPostsService(profile: PostsProfile) {
         ),
         'DELETE',
       );
-
-      if (existing) {
-        await anonymousDisplay.set(
-          'comment',
-          existing,
-          false,
-        );
-      }
 
       await Promise.all([
         this.loadComments(

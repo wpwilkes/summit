@@ -224,12 +224,12 @@ test('rapid repeat taps cannot send duplicate in-flight vote writes', async () =
   assert.equal(service.get('1').voteCount, 11);
 });
 
-test('anonymous post choice stays local, survives reload and can be turned off', async () => {
+test('anonymous post setting persists on server, survives reload and can be turned off', async () => {
   const { service, create, requests } = setup();
   await service.load();
   await service.create({ body: 'My post', community: 'education', isAnonymous: true });
   const sent = requests.find(({ method }) => method === 'POST');
-  assert.deepEqual(sent.body, { communityId: 1, title: 'My post', body: 'My post' });
+  assert.deepEqual(sent.body, { communityId: 1, title: 'My post', body: 'My post', isAnonymous: true });
   assert.equal(service.get('2').isAnonymous, true);
   assert.equal(service.get('2').author, 'Ayman');
   assert.equal(service.get('2').isOwner, true);
@@ -238,7 +238,7 @@ test('anonymous post choice stays local, survives reload and can be turned off',
   assert.equal(reloaded.get('2').isAnonymous, true);
   await reloaded.update('2', { body: 'Edited', community: 'education', isAnonymous: false });
   assert.equal(reloaded.get('2').isAnonymous, false);
-  assert.ok(requests.filter(({ method }) => method === 'PATCH').every(({ body }) => !('isAnonymous' in body)));
+  assert.ok(requests.filter(({ method }) => method === 'PATCH').some(({ body }) => body.isAnonymous === false));
 });
 
 test('a delayed background feed response cannot overwrite a newer successful post vote', async () => {
@@ -258,12 +258,12 @@ test('a delayed background feed response cannot overwrite a newer successful pos
   assert.equal(service.get('1').voteCount, 11);
 });
 
-test('anonymous comments persist locally, preserve ownership and support editing back to a name', async () => {
+test('anonymous comments persist on the server and support editing back to a name', async () => {
   const { service, create, requests } = setup();
   await service.load();
   await service.loadComments('1');
   await service.comment('1', '  Hello  ', true);
-  assert.deepEqual(requests.find(({ method }) => method === 'POST').body, { body: 'Hello' });
+  assert.deepEqual(requests.find(({ method }) => method === 'POST').body, { body: 'Hello', isAnonymous: true });
   assert.equal(service.comments('1')[1].isAnonymous, true);
   assert.equal(service.comments('1')[1].isOwner, true);
   const reloaded = create();
@@ -271,41 +271,41 @@ test('anonymous comments persist locally, preserve ownership and support editing
   assert.equal(reloaded.comments('1')[1].isAnonymous, true);
   await reloaded.updateComment('1', '2', 'Changed', false);
   assert.equal(reloaded.comments('1')[1].isAnonymous, false);
-  assert.deepEqual(requests.find(({ method }) => method === 'PATCH').body, { body: 'Changed' });
+  assert.deepEqual(requests.find(({ method }) => method === 'PATCH').body, { body: 'Changed', isAnonymous: false });
 });
 
-test('anonymous choices do not transfer to another account or another device', async () => {
+test('anonymous display is consistent across accounts and devices', async () => {
   const { service, create, state } = setup();
   await service.load();
   await service.update('1', { body: 'Private display', community: 'education', isAnonymous: true });
   const otherAccount = create(8);
   await otherAccount.load();
-  assert.equal(otherAccount.get('1').isAnonymous, false);
+  assert.equal(otherAccount.get('1').isAnonymous, true);
   assert.equal(otherAccount.get('1').isOwner, false);
   const otherDevice = setup();
   otherDevice.state.posts = structuredClone(state.posts);
   await otherDevice.service.load();
-  assert.equal(otherDevice.service.get('1').isAnonymous, false);
+  assert.equal(otherDevice.service.get('1').isAnonymous, true);
 });
 
-test('device storage failure warns without resubmitting successful content', async () => {
+test('local storage failure does not affect server-side anonymity or duplicate submissions', async () => {
   const { service, state, requests } = setup();
   await service.load();
   state.storageFailure = true;
   await service.create({ body: 'Save once', community: 'education', isAnonymous: true });
   assert.equal(requests.filter(({ method }) => method === 'POST').length, 1);
   assert.equal(service.get('2').isAnonymous, true);
-  assert.match(service.getDisplayWarning(), /only for this session/);
+  assert.equal(service.getDisplayWarning(), '');
 });
 
-test('normal display is the default and deleting content removes its local setting', async () => {
+test('normal display is the default and deletion removes the post', async () => {
   const { service, storage } = setup();
   await service.load();
   assert.equal(service.get('1').isAnonymous, false);
   await service.create({ body: 'Temporary', community: 'education', isAnonymous: true });
   await service.remove('2');
   assert.equal(service.get('2'), undefined);
-  assert.deepEqual([...storage.values()].map(JSON.parse), [[]]);
+  assert.equal(storage.size, 0);
 });
 
 test('Jalal summary lookup still returns null when no saved summary exists', async () => {
@@ -316,7 +316,7 @@ test('Jalal summary lookup still returns null when no saved summary exists', asy
   ]);
 });
 
-test('post voting and local anonymous names preserve summary requests and returned text', async () => {
+test('post voting and server anonymous names preserve summary requests and returned text', async () => {
   const { service, state, requests } = setup();
   await service.load();
   await service.loadComments('1');
@@ -347,4 +347,25 @@ test('summary request errors keep the existing error behavior and do not change 
   await assert.rejects(service.summary('1'), /Vote rejected/);
   await assert.rejects(service.generateSummary('1'), /Vote rejected/);
   assert.equal(service.get('1').voteCount, 10);
+});
+
+
+test('server-anonymous authors render safely without author IDs or usernames', async () => {
+  const { service, state } = setup();
+  state.posts[0] = {
+    ...state.posts[0], authorId: undefined, authorUsername: undefined,
+    isAnonymous: true, isOwner: true,
+  };
+  state.comments[0] = {
+    ...state.comments[0], authorId: undefined, authorUsername: undefined,
+    isAnonymous: true, isOwner: true,
+  };
+  await service.load();
+  await service.loadComments('1');
+  assert.equal(service.get('1').author, 'Anonymous');
+  assert.equal(service.get('1').isAnonymous, true);
+  assert.equal(service.get('1').isOwner, true);
+  assert.equal(service.comments('1')[0].author, 'Anonymous');
+  assert.equal(service.comments('1')[0].isAnonymous, true);
+  assert.equal(service.comments('1')[0].isOwner, true);
 });

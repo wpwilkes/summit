@@ -9,6 +9,7 @@ export const CommentSchema = z.object({
   authorUsername: z.string().optional(),
   parentId: z.int().nullable(),
   isAnonymous: z.boolean(),
+  isOwner: z.boolean().optional(),
   body: CommentBodySchema,
   votes: z.int(),
   deleted: z.boolean(),
@@ -84,6 +85,7 @@ export type RemoveCommentResponse = z.infer<typeof RemoveCommentResponseSchema>;
 
 export const UpdateCommentRequestSchema = z.object({
   body: CommentBodySchema,
+  isAnonymous: z.boolean().optional(),
 });
 export type UpdateCommentRequest = z.infer<typeof UpdateCommentRequestSchema>;
 

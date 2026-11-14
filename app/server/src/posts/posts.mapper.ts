@@ -3,11 +3,12 @@ import type { Post } from '@summit/shared';
 
 export type DatabasePost = NonNullable<Awaited<ReturnType<typeof getByIdPost>>>;
 
-export function toPostContract(post: DatabasePost): Post {
+export function toPostContract(post: DatabasePost, viewerId?: number): Post {
   return {
     id: post.id,
     communityId: post.communityId,
     isAnonymous: post.isAnonymous,
+    isOwner: viewerId !== undefined && viewerId === post.authorId,
     ...(!post.isAnonymous
       ? {
           authorId: post.authorId,

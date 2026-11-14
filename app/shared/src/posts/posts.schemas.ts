@@ -18,6 +18,7 @@ export const PostSchema = z.object({
   votes: z.int(),
   createdAt: z.iso.datetime(),
   isAnonymous: z.boolean(),
+  isOwner: z.boolean().optional(),
 });
 export type Post = z.infer<typeof PostSchema>;
 
@@ -99,6 +100,7 @@ export const UpdatePostRequestSchema = z
     title: z.string().optional(),
     communityId: z.int().positive().optional(),
     body: z.string().optional(),
+    isAnonymous: z.boolean().optional(),
     photoUrl: z
       .string()
       .regex(/^\/api\/posts\/images\/[0-9a-f-]+\.(jpg|png|webp)$/)
@@ -112,9 +114,10 @@ export const UpdatePostRequestSchema = z
       data.title !== undefined ||
       data.body !== undefined ||
       data.communityId !== undefined ||
-      data.photoUrl !== undefined,
+      data.photoUrl !== undefined ||
+      data.isAnonymous !== undefined,
     {
-      message: 'Provide a title or body to update.',
+      message: 'Provide at least one field to update.',
     },
   );
 export type UpdatePostRequest = z.infer<typeof UpdatePostRequestSchema>;
