@@ -47,10 +47,10 @@ export async function createPostController(
 }
 
 export async function getAllPostsController(
-  _request: Request,
+  request: Request,
   response: Response<GetAllPostsResponse>,
 ): Promise<void> {
-  const result = await getAllPostsService();
+  const result = await getAllPostsService(request.userId);
   response.status(HttpStatus.OK).json(result);
 }
 
@@ -66,7 +66,7 @@ export async function getByIdPostController(
       'Invalid post ID.',
     );
   }
-  const result = await getByIdPostService(parsed.data.postId);
+  const result = await getByIdPostService(parsed.data.postId, request.userId);
   response.status(HttpStatus.OK).json(result);
 }
 

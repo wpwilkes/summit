@@ -16,6 +16,7 @@ export async function getCommentsForSummary(postId: number) {
       id: true,
       parentId: true,
       body: true,
+      isAnonymous: true,
       author: { select: { username: true } },
     },
   });

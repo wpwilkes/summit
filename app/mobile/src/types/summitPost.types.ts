@@ -10,7 +10,7 @@ export type PostInput = {
   body: string;
   community: string;
   photo?: PostPhoto;
-  /** Local display choice, never included in a backend request. */
+  /** Persist anonymous identity on the backend for all viewers. */
   isAnonymous?: boolean;
 };
 
@@ -33,7 +33,7 @@ export type SummitComment = {
   parentId?: string | null;
   body: string;
   author: string;
-  /** Local display choice, never included in a backend request. */
+  /** Persist anonymous identity on the backend for all viewers. */
   isAnonymous?: boolean;
   createdAt: string;
   updatedAt: string;

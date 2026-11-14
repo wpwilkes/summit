@@ -79,6 +79,7 @@ export async function updatePost(
     title?: string;
     body?: string;
     communityId?: number;
+    isAnonymous?: boolean;
     photoUrl?: string | null;
     photoWidth?: number | null;
     photoHeight?: number | null;

@@ -1,4 +1,4 @@
-import { requireAuth } from '../auth/middleware/middleware.js';
+import { optionalAuth, requireAuth } from '../auth/middleware/middleware.js';
 import {
   createPostController,
   getAllPostsController,
@@ -19,8 +19,16 @@ postsRouter.post(
   requireAuth,
   createPostController,
 );
-postsRouter.get(POSTS_CONTRACTS.getAll.path, getAllPostsController);
-postsRouter.get(POSTS_CONTRACTS.getById.path, getByIdPostController);
+postsRouter.get(
+  POSTS_CONTRACTS.getAll.path,
+  optionalAuth,
+  getAllPostsController,
+);
+postsRouter.get(
+  POSTS_CONTRACTS.getById.path,
+  optionalAuth,
+  getByIdPostController,
+);
 postsRouter.get(
   POSTS_CONTRACTS.getVote.path,
   requireAuth,

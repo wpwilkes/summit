@@ -40,3 +40,16 @@ export function requireAuth(
   }
   next();
 }
+
+/** Keep feeds public, but identify the viewer when they supply a valid token. */
+export function optionalAuth(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
+  if (!request.headers.authorization) {
+    next();
+    return;
+  }
+  requireAuth(request, response, next);
+}

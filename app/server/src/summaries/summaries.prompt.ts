@@ -15,6 +15,7 @@ type SummaryComment = {
   parentId: number | null;
   body: string;
   author: { username: string };
+  isAnonymous: boolean;
 };
 
 const SYSTEM_PROMPT = [
@@ -44,7 +45,8 @@ export function buildSummaryMessages(
       comment.parentId === null
         ? ''
         : ` (reply to comment ${comment.parentId})`;
-    return `[${comment.id}] ${comment.author.username}${replyNote}: ${shorten(comment.body)}`;
+    const name = comment.isAnonymous ? 'Anonymous' : comment.author.username;
+    return `[${comment.id}] ${name}${replyNote}: ${shorten(comment.body)}`;
   });
 
   const discussion = [

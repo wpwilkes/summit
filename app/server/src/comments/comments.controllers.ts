@@ -127,7 +127,10 @@ export async function getPostCommentsController(
       'Invalid post ID.',
     );
   }
-  const result = await getPostCommentsService(parsedParams.data.postId);
+  const result = await getPostCommentsService(
+    parsedParams.data.postId,
+    request.userId,
+  );
   response.status(HttpStatus.OK).json(result);
 }
 

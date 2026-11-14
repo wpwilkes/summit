@@ -11,10 +11,10 @@ export default function AnonymousOption({ value, onChange, disabled = false }: P
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <Text style={[ui.label, styles.label]}>Show as Anonymous on this device</Text>
+        <Text style={[ui.label, styles.label]}>Post anonymously</Text>
         <Switch
-          accessibilityLabel="Show as Anonymous on this device"
-          accessibilityHint="Changes the name beside your posts and comments on this device only. Other users and AI summaries may still show your username."
+          accessibilityLabel="Post anonymously"
+          accessibilityHint="Hide your username from other users on this post or comment."
           value={value}
           onValueChange={onChange}
           disabled={disabled}
@@ -22,7 +22,7 @@ export default function AnonymousOption({ value, onChange, disabled = false }: P
         />
       </View>
       <Text style={styles.note}>
-        Only changes the name beside your posts and comments on this device. Other users, other screens and AI summaries may still show your username.
+        Your username will appear as Anonymous to other users. The server retains your identity for editing and moderation.
       </Text>
     </View>
   );

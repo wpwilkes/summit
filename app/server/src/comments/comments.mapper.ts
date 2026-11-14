@@ -3,7 +3,10 @@ import { Comment } from '@summit/shared';
 
 export type DatabaseComment = Awaited<ReturnType<typeof createComment>>;
 
-export function toCommentContract(comment: DatabaseComment): Comment {
+export function toCommentContract(
+  comment: DatabaseComment,
+  viewerId?: number,
+): Comment {
   const deleted = comment.deletedAt !== null;
   return {
     id: comment.id,
@@ -20,5 +23,7 @@ export function toCommentContract(comment: DatabaseComment): Comment {
     deleted,
     createdAt: comment.createdAt.toISOString(),
     isAnonymous: comment.isAnonymous,
+    isOwner:
+      viewerId !== undefined && viewerId === comment.authorId && !deleted,
   };
 }

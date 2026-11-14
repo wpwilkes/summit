@@ -1,4 +1,4 @@
-import { requireAuth } from '../auth/middleware/middleware.js';
+import { optionalAuth, requireAuth } from '../auth/middleware/middleware.js';
 import {
   createCommentController,
   createReplyController,
@@ -30,6 +30,7 @@ commentsRouter.get(
 );
 commentsRouter.get(
   COMMENTS_CONTRACTS.getAllForPost.path,
+  optionalAuth,
   getPostCommentsController,
 );
 commentsRouter.delete(
