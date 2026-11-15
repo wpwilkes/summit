@@ -25,7 +25,7 @@ fi
 
 echo "=== 2. Updating from GitHub ==="
 
-git pull --ff-only origin sprint-three
+git pull --ff-only origin develop
 
 # Read deployment settings, including SITE_DOMAIN.
 set -a
