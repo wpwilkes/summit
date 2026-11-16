@@ -1,0 +1,25 @@
+Mutant 1: feed route loses optional authentication
+
+Target file: app/server/src/posts/posts.routes.ts
+
+Change:
+  The optionalAuth middleware was removed from GET /api/posts (getAll). The
+  route now reads:
+    postsRouter.get(POSTS_CONTRACTS.getAll.path, getAllPostsController);
+
+Effect:
+  request.userId is never set on the feed, so getAllPostsService gets
+  viewerId === undefined and toPostContract always returns isOwner: false.
+  An authenticated author sees isOwner: false on their own posts in the feed,
+  which hides the edit and delete controls in the clients. GET /api/posts/:postId
+  still uses optionalAuth, so the two endpoints disagree.
+
+Why it survives:
+  No test checks isOwner anywhere. The one feed request sent with a token
+  (posts-images-shared-feed: Bob reading Alice's post) only checks
+  authorUsername, communityName and commentCount. Every other feed test is
+  anonymous.
+
+Test that would catch it:
+  Create a post as user A, call GET /api/posts with A's token, and check that the
+  post has isOwner === true. Optionally check isOwner === false for another user.

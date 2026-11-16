@@ -51,6 +51,8 @@ services:
 
     volumes:
       - summit_post_images:/app/server/uploads
+      - ./app/server/src:/app/server/src
+      - ./app/server/tests:/app/server/tests
 
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"

@@ -1,0 +1,27 @@
+Mutant 2: PATCH checks the post's current community instead of the requested one
+
+Target file: app/server/src/posts/posts.service.ts
+
+Change:
+  In updatePostService, the community check was changed from
+    getCommunityById(data.communityId)
+  to
+    getCommunityById(existingPost.communityId)
+  This looks like a copy/paste slip next to the existingPost ownership check.
+
+Effect:
+  The post's current community always exists, so the check never fails. For
+  PATCH /api/posts/:postId with { communityId: <nonexistent> }, the request goes
+  on to prisma.post.update and fails with a foreign-key error. The client gets a
+  500 instead of 404 COMMUNITY_NOT_FOUND. Moving a post to a valid community still
+  works.
+
+Why it survives:
+  No test sends communityId in a PATCH body, whether valid or invalid. The
+  COMMUNITY_NOT_FOUND tests in communities.api.test.ts go through the
+  communities endpoints, not posts.
+
+Test that would catch it:
+  PATCH your own post with { communityId: 2147483647 } and expect
+  404 / COMMUNITY_NOT_FOUND. Also move a post to a second valid community and
+  check that communityId and communityName change.

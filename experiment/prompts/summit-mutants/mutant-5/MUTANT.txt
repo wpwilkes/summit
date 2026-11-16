@@ -1,0 +1,27 @@
+Mutant 5: post commentCount includes soft-deleted comments
+
+Target file: app/server/src/posts/posts.repositories.ts
+
+Change:
+  The shared postRelations include changed from
+    _count: { select: { comments: { where: { deletedAt: null } } } }
+  to
+    _count: { select: { comments: true } }
+
+Effect:
+  Comments are soft-deleted (deletedAt is set), so the rows stay. Every
+  posts-feature response (POST, GET list, GET by id, PATCH) now counts deleted
+  comments in commentCount. A post whose only comment was deleted still shows
+  commentCount: 1.
+
+Why it survives:
+  Post commentCount is only checked in the feed test, on a post with no
+  comments (0 either way). The search tests check commentCount through the
+  search module's own repository, which keeps the deletedAt filter. The
+  summaries tests check summary.commentCount, which does not use this include.
+  No test deletes a comment and then reads the post.
+
+Test that would catch it:
+  Create a post and add one comment, then delete the comment through
+  DELETE /api/comments/:id. Expect GET /api/posts/:postId and the matching
+  GET /api/posts item to show commentCount === 0.

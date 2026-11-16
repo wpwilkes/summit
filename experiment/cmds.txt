@@ -1,0 +1,1 @@
+docker compose exec -e NODE_ENV=test server npx tsx --test --experimental-test-coverage --test-coverage-include='src/posts/**/*.ts' tests/integration/posts.api.test.ts

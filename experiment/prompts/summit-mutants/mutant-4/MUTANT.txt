@@ -1,0 +1,26 @@
+Mutant 4: removing a vote always decrements the score
+
+Target file: app/server/src/posts/posts.repositories.ts
+
+Change:
+  In setPostVote, the score update
+    vote: { increment: value - previous }
+  became
+    vote: value === 0 ? { decrement: 1 } : { increment: value - previous }
+  This reflects a mistaken belief that clearing a vote always means taking one
+  point away.
+
+Effect:
+  Clearing an upvote (1 -> 0) still works: -1. Clearing a downvote (-1 -> 0)
+  should add 1, but it subtracts 1 instead. The score drifts down by 2 every time
+  someone withdraws a downvote, and the stored post.vote no longer matches the
+  sum of PostVote rows.
+
+Why it survives:
+  The only removal test is upvote then value 0, where decrement 1 is the
+  correct answer. Clearing a downvote is never tested. Sending value 0 with no
+  prior vote returns early before this code runs.
+
+Test that would catch it:
+  PUT { value: -1 }, then PUT { value: 0 }. Expect votes === 0 and
+  userVote === 0, and check that GET /api/posts/:postId also shows votes 0.

@@ -474,3 +474,88 @@ test('anonymous posts stay attributed internally but hide the author in public A
     .send({ title: 'Not mine' });
   _assertApiError(otherUpdate, 403, 'FORBIDDEN');
 });
+
+// Append to posts.api.test.ts.
+// Targets all five supplied mutants in one integration test.
+// Statically verified against the original implementation; not executed.
+
+test('post ownership, community validation, vote isolation, and comment counts remain correct', async () => {
+  const author = await _registerUser();
+  const otherUser = await _registerUser();
+  const post = await _createPost(author.token);
+
+  // Mutant: posts.service.ts
+  // Updating a post must validate the destination community.
+  const invalidCommunity = await request(app)
+    .patch(`/api/posts/${post.id}`)
+    .set('Authorization', `Bearer ${author.token}`)
+    .send({ communityId: 2147483647 });
+
+  _assertApiError(invalidCommunity, 404, 'COMMUNITY_NOT_FOUND');
+
+  // Establish a downvote.
+  const downvote = await request(app)
+    .put(`/api/posts/${post.id}/vote`)
+    .set('Authorization', `Bearer ${author.token}`)
+    .send({ value: -1 });
+
+  assert.equal(downvote.status, 200);
+  assert.equal(downvote.body.votes, -1);
+  assert.equal(downvote.body.userVote, -1);
+
+  // Mutant: posts.repositories.ts
+  // A user must not receive another user's vote.
+  const otherUserVote = await request(app)
+    .get(`/api/posts/${post.id}/vote`)
+    .set('Authorization', `Bearer ${otherUser.token}`);
+
+  assert.equal(otherUserVote.status, 200);
+  assert.equal(otherUserVote.body.votes, -1);
+  assert.equal(otherUserVote.body.userVote, 0);
+
+  // Mutant: posts.repositories(1).ts
+  // Removing a downvote must increase the aggregate score.
+  const removedVote = await request(app)
+    .put(`/api/posts/${post.id}/vote`)
+    .set('Authorization', `Bearer ${author.token}`)
+    .send({ value: 0 });
+
+  assert.equal(removedVote.status, 200);
+  assert.equal(removedVote.body.votes, 0);
+  assert.equal(removedVote.body.userVote, 0);
+
+  // Establish a comment and subsequently soft-delete it.
+  const comment = await request(app)
+    .post(`/api/posts/${post.id}/comments`)
+    .set('Authorization', `Bearer ${author.token}`)
+    .send({ body: 'Comment to be deleted.' });
+
+  assert.equal(comment.status, 201);
+
+  const deletedComment = await request(app)
+    .delete(`/api/comments/${comment.body.comment.id}`)
+    .set('Authorization', `Bearer ${author.token}`);
+
+  assert.equal(deletedComment.status, 200);
+  assert.equal(deletedComment.body.success, true);
+
+  const feed = await request(app)
+    .get('/api/posts')
+    .set('Authorization', `Bearer ${author.token}`);
+
+  assert.equal(feed.status, 200);
+
+  const feedPost = feed.body.posts.find(
+    (p: { id: number }) => p.id === post.id,
+  );
+
+  assert.ok(feedPost);
+
+  // Mutant: posts.routes.ts
+  // An authenticated feed must identify the viewer's own posts.
+  assert.equal(feedPost.isOwner, true);
+
+  // Mutant: posts.repositories(2).ts
+  // Soft-deleted comments must not contribute to the comment count.
+  assert.equal(feedPost.commentCount, 0);
+});

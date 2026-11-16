@@ -1,0 +1,25 @@
+Mutant 3: GET vote returns any user's vote on the post
+
+Target file: app/server/src/posts/posts.repositories.ts
+
+Change:
+  getPostVote now uses
+    prismaClient.postVote.findFirst({ where: { postId } })
+  instead of findUnique on the compound key postId_userId: { postId, userId }.
+  The userId filter is gone.
+
+Effect:
+  GET /api/posts/:postId/vote returns userVote from whichever PostVote row
+  Prisma finds first for that post. A user who has never voted can see
+  userVote: 1 or -1 because someone else voted. A user who voted can see another
+  voter's value. The votes total is still correct because it comes from the
+  post row.
+
+Why it survives:
+  The only GET-vote test has a single user vote on their own post, then read
+  it back. With one row, the first row is always the caller's.
+
+Test that would catch it:
+  User A upvotes a post. User B (who has not voted) calls GET vote and expects
+  userVote === 0. Alternatively, A upvotes and B downvotes, then check that each
+  user's GET returns their own value.
