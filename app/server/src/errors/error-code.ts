@@ -6,10 +6,15 @@ export class ErrorCode {
   static readonly EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
   static readonly EMAIL_TAKEN = 'EMAIL_TAKEN';
   static readonly FORBIDDEN = 'FORBIDDEN';
+  static readonly IMAGE_SEARCH_FAILED = 'IMAGE_SEARCH_FAILED';
+  static readonly IMAGE_SEARCH_TIMEOUT = 'IMAGE_SEARCH_TIMEOUT';
+  static readonly IMAGE_SEARCH_UNAVAILABLE = 'IMAGE_SEARCH_UNAVAILABLE';
+  static readonly IMAGE_TOO_LARGE = 'IMAGE_TOO_LARGE';
   static readonly POST_NOT_FOUND = 'POST_NOT_FOUND';
   static readonly INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR';
   static readonly INVALID_COMMENT_ID = 'INVALID_COMMENT_ID';
   static readonly INVALID_CREDENTIALS = 'INVALID_CREDENTIALS';
+  static readonly INVALID_IMAGE_TYPE = 'INVALID_IMAGE_TYPE';
   static readonly INVALID_POST_ID = 'INVALID_POST_ID';
   static readonly INVALID_REQUEST = 'INVALID_REQUEST';
   static readonly INVALID_TOKEN = 'INVALID_TOKEN';

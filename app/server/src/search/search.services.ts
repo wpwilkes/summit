@@ -1,5 +1,11 @@
-import { searchPosts } from './search.repositories.js';
-import type { SearchPostResult, SearchPostsResponse } from '@summit/shared';
+import { rankByTermOrder } from './search.ranking.js';
+import { searchPosts, searchPostsAndComments } from './search.repositories.js';
+import { describeImage, toSearchTerms } from './search.vision.js';
+import type {
+  SearchByImageResponse,
+  SearchPostResult,
+  SearchPostsResponse,
+} from '@summit/shared';
 
 type DatabaseSearchPost = Awaited<ReturnType<typeof searchPosts>>[number];
 
@@ -29,5 +35,23 @@ export async function searchPostsService(
   return {
     query: keyword,
     posts: posts.map(toSearchPostResult),
+  };
+}
+
+// Search by image: the AI says what the picture shows, then we look for posts
+// whose title, text or comments mention any of those words. Posts that match
+// the most important words come first.
+export async function searchByImageService(
+  image: Buffer,
+  mimeType: string,
+): Promise<SearchByImageResponse> {
+  const keywords = await describeImage(image, mimeType);
+  const terms = toSearchTerms(keywords);
+  const matchesPerTerm = await Promise.all(
+    terms.map((term) => searchPostsAndComments(term)),
+  );
+  return {
+    keywords,
+    posts: rankByTermOrder(matchesPerTerm).map(toSearchPostResult),
   };
 }

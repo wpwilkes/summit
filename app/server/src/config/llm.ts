@@ -12,3 +12,9 @@ export function getOpenRouterApiKey(): string | undefined {
 export function getOpenRouterModel(): string {
   return process.env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL;
 }
+
+// The model that looks at pictures for search by image. It falls back to
+// OPENROUTER_MODEL, so the feature still works when only that one is set.
+export function getOpenRouterVisionModel(): string {
+  return process.env.OPENROUTER_VISION_MODEL?.trim() || getOpenRouterModel();
+}

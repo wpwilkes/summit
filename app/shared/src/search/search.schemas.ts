@@ -30,3 +30,23 @@ export const SearchPostsResponseSchema = z.object({
   posts: z.array(SearchPostResultSchema),
 });
 export type SearchPostsResponse = z.infer<typeof SearchPostsResponseSchema>;
+
+// Search by image: the request body is the raw image file (JPEG, PNG or WebP),
+// sent with its own Content-Type such as image/jpeg, not JSON.
+export const SEARCH_IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+export type SearchImageMimeType = (typeof SEARCH_IMAGE_MIME_TYPES)[number];
+
+// Biggest image the server accepts (5 MB).
+export const SEARCH_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+// keywords are the words the AI saw in the picture. The posts are the ones
+// whose title, text or comments contain at least one of those words.
+export const SearchByImageResponseSchema = z.object({
+  keywords: z.array(z.string().nonempty()),
+  posts: z.array(SearchPostResultSchema),
+});
+export type SearchByImageResponse = z.infer<typeof SearchByImageResponseSchema>;

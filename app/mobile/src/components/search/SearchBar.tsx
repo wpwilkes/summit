@@ -10,11 +10,14 @@ type Props = {
   onSubmit: () => void;
   /** Called when the user taps the X. The parent should empty `value`. */
   onClear: () => void;
+  /** Called when the user taps the camera. Hidden when not given. */
+  onImageSearch?: () => void;
   autoFocus?: boolean;
 };
 
 /**
- * The search box: a magnifier button, the text field, and an X to clear it.
+ * The search box: a magnifier button, the text field, an X to clear it, and
+ * a camera button to search with a picture.
  * The X only shows while there is something typed.
  */
 export default function SearchBar({
@@ -22,6 +25,7 @@ export default function SearchBar({
   onChangeText,
   onSubmit,
   onClear,
+  onImageSearch,
   autoFocus = false,
 }: Props) {
   return (
@@ -58,6 +62,17 @@ export default function SearchBar({
           style={styles.iconButton}
         >
           <PostIcon name="close" size={20} color={colors.muted} />
+        </Pressable>
+      )}
+      {onImageSearch && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Search with a picture"
+          onPress={onImageSearch}
+          hitSlop={8}
+          style={styles.iconButton}
+        >
+          <PostIcon name="camera" size={22} color={colors.muted} />
         </Pressable>
       )}
     </View>

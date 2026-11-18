@@ -28,7 +28,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Choose a photo to attach to your Summit post.",
-          "cameraPermission": false,
+          "cameraPermission": "Take a photo to search Summit for related posts.",
           "microphonePermission": false
         }
       ],

@@ -9,6 +9,8 @@ export class HttpStatus {
   static readonly NO_CONTENT = 204;
   static readonly NOT_FOUND = 404;
   static readonly OK = 200;
+  static readonly PAYLOAD_TOO_LARGE = 413;
   static readonly SERVICE_UNAVAILABLE = 503;
   static readonly UNAUTHORIZED = 401;
+  static readonly UNSUPPORTED_MEDIA_TYPE = 415;
 }
